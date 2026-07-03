@@ -91,6 +91,8 @@
   #noteBody th { background:#f4f2ea; }
   #noteBody blockquote { border-left:3px solid var(--line); margin:8px 0; padding:2px 14px; color:var(--muted); }
   #noteBody img { max-width:100%; }
+  #noteBody .mermaid { background:none; text-align:center; }
+  #noteBody .mermaid svg { max-width:100%; height:auto; }
   #panel .noteLink { color:#185FA5; cursor:pointer; }
 </style>
 </head>
@@ -128,9 +130,11 @@
 <script src="d3.v7.min.js"></script>
 <script src="marked.min.js"></script>
 <script src="katex/katex.min.js"></script>
+<script src="mermaid.min.js"></script>
 <script src="graph.data.js"></script>
 <script src="notes.data.js"></script>
 <script>
+if (window.mermaid) mermaid.initialize({startOnLoad: false, theme: 'neutral'});
 if (!window.GRAPH) {
   document.getElementById('stage').innerHTML =
     '<div id="empty">No graph data. Run: <code>python -m brain ui</code></div>';
@@ -289,13 +293,19 @@ function clearFocus() {
 }
 
 // ---- markdown note viewer (bodies bundled in notes.data.js) ----
-// Notes are authored in Joplin with KaTeX math ($...$ / $$...$$). Math is
-// extracted to placeholders BEFORE the markdown pass (marked would mangle the
-// underscores), then each fragment is rendered with KaTeX afterwards.
+// Notes are authored in Joplin with KaTeX math ($...$ / $$...$$) and mermaid
+// diagrams (```mermaid fences). Order matters: fenced code is stashed FIRST
+// (protecting mermaid sources and code like R's df$col from the math pass),
+// then math is stashed (marked would mangle the underscores), then marked
+// runs, then everything is restored — math via KaTeX, mermaid as .mermaid
+// blocks that mermaid.run() turns into SVG after insertion.
 function renderMarkdown(src) {
   if (!window.marked) return `<pre>${src.replace(/</g, '&lt;')}</pre>`;
-  const math = [];
-  let s = src;
+  const fences = [], math = [];
+  let s = src.replace(/```(\w*)[ \t]*\n([\s\S]*?)```/g, (_, lang, code) => {
+    fences.push({lang, code});
+    return `⟦C${fences.length - 1}⟧`;
+  });
   if (window.katex) {
     const stash = (tex, display) => {
       math.push({tex, display});
@@ -317,6 +327,13 @@ function renderMarkdown(src) {
       return `<code>${tex.replace(/</g, '&lt;')}</code>`;
     }
   });
+  html = html.replace(/(?:<p>)?⟦C(\d+)⟧(?:<\/p>)?/g, (_, i) => {
+    const {lang, code} = fences[+i];
+    const esc = code.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    return lang === 'mermaid'
+      ? `<pre class="mermaid">${esc}</pre>`
+      : `<pre><code class="language-${lang}">${esc}</code></pre>`;
+  });
   return html;
 }
 
@@ -327,10 +344,14 @@ function viewNote(id, meta) {
     <h2>${id}</h2>
     <span class="sub">${meta ? `conf ${meta.confidence} · ${meta.lastReviewed}` : ''}</span>
     <button id="noteClose" title="close">✕</button>`;
-  document.getElementById('noteBody').innerHTML =
+  const nb = document.getElementById('noteBody');
+  nb.innerHTML =
     body === undefined
       ? '<p style="color:var(--muted)">Note body not bundled — run <code>python -m brain graph</code> to refresh.</p>'
       : renderMarkdown(body);
+  if (window.mermaid && nb.querySelector('.mermaid')) {
+    mermaid.run({nodes: nb.querySelectorAll('.mermaid')}).catch(() => {});
+  }
   overlay.style.display = 'flex';
   document.getElementById('noteClose').addEventListener('click', closeNote);
 }
