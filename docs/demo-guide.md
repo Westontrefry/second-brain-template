@@ -53,7 +53,8 @@ see the actual notes behind it — and **click any note in that list to read
 it right there**, nicely formatted — math equations, flowchart diagrams, and
 color-highlighted code all render properly — without leaving the map. Use the
 **Goal** dropdown to show only what matters for one goal, and tick
-**show gaps** to light up what's missing.
+**show gaps** to light up what's missing. Prefer dark mode? Hit the 🌙 button
+in the header — it remembers your choice and follows you to the dashboard.
 
 ### 2. Check the dashboard
 **What it is:** click **dashboard →** in the map's header. Three pictures:

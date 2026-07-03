@@ -4,15 +4,19 @@
 <meta charset="utf-8">
 <title>Second Brain — knowledge graph</title>
 <link rel="stylesheet" href="katex/katex.min.css">
-<link rel="stylesheet" href="hljs-github.min.css">
+<link rel="stylesheet" href="hljs-github.min.css" id="hljsCss">
 <style>
   :root { --strong:#1D9E75; --weak:#EF9F27; --hot:#D85A30; --dim-op:.12;
-          --ink:#2c2c2a; --muted:#77766f; --line:#d9d7ce; --bg:#faf9f5; }
+          --ink:#2c2c2a; --muted:#77766f; --line:#d9d7ce; --bg:#faf9f5;
+          --panel:#ffffff; --code-bg:#f4f2ea; --edge:#9a988f; --link:#185FA5; }
+  body.dark { --ink:#e6e4dc; --muted:#9c9a90; --line:#3b3a36; --bg:#1b1b19;
+              --panel:#252522; --code-bg:#2e2e2a; --edge:#66655e; --link:#7db3ea; }
   * { box-sizing:border-box; }
+  select, input { background:var(--panel); color:inherit; }
   body { margin:0; font:14px/1.5 -apple-system, "Segoe UI", sans-serif;
          color:var(--ink); background:var(--bg); overflow:hidden; }
   header { display:flex; gap:14px; align-items:center; padding:10px 16px;
-           border-bottom:1px solid var(--line); background:#fff; flex-wrap:wrap; }
+           border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
   header h1 { font-size:15px; font-weight:600; margin:0 8px 0 0; }
   header label { font-size:12.5px; color:var(--muted); display:flex; gap:5px; align-items:center; }
   select { font:inherit; font-size:12.5px; padding:2px 4px; }
@@ -20,10 +24,10 @@
   .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:4px; vertical-align:-1px; }
   #stage { position:relative; width:100vw; height:calc(100vh - 45px); }
   svg { width:100%; height:100%; display:block; cursor:grab; }
-  .edge { stroke:#9a988f; stroke-opacity:.45; }
+  .edge { stroke:var(--edge); stroke-opacity:.45; }
   .edge.wikilink { stroke-dasharray:2 3; }
   .edge.prereq { stroke-opacity:.6; }
-  .node circle.missing { fill:none; stroke:#9a988f; stroke-width:1.5; stroke-dasharray:4 4; }
+  .node circle.missing { fill:none; stroke:var(--edge); stroke-width:1.5; stroke-dasharray:4 4; }
   .node text { font-size:11px; fill:var(--muted); pointer-events:none; }
   .node { cursor:pointer; }
   .dim { opacity:var(--dim-op); }
@@ -34,7 +38,7 @@
   .focusring circle { stroke:#378ADD; stroke-width:2.5px; }
   #route { fill:none; stroke:var(--hot); stroke-width:3; stroke-opacity:.7; stroke-dasharray:8 5; }
   #panel { position:absolute; top:12px; right:12px; width:320px; max-height:calc(100% - 24px);
-           overflow-y:auto; background:#fff; border:1px solid var(--line); border-radius:10px;
+           overflow-y:auto; background:var(--panel); border:1px solid var(--line); border-radius:10px;
            padding:14px 16px; box-shadow:0 4px 18px rgba(0,0,0,.08); display:none; }
   #panel h2 { font-size:16px; margin:0 0 2px; }
   #panel .sub { color:var(--muted); font-size:12px; margin-bottom:10px; }
@@ -42,38 +46,38 @@
               color:var(--muted); margin:14px 0 4px; }
   #panel table { width:100%; font-size:12.5px; border-collapse:collapse; }
   #panel td { padding:2px 0; } #panel td:last-child { text-align:right; }
-  #panel a { color:#185FA5; text-decoration:none; font-size:12.5px; }
+  #panel a { color:var(--link); text-decoration:none; font-size:12.5px; }
   #panel .chip { display:inline-block; font-size:11.5px; padding:2px 8px; margin:2px 4px 2px 0;
-                 border:1px solid var(--line); border-radius:20px; cursor:pointer; background:#fff; }
+                 border:1px solid var(--line); border-radius:20px; cursor:pointer; background:var(--panel); }
   #panel .chip:hover { border-color:var(--ink); }
   #crumbs { font-size:11.5px; color:var(--muted); margin-bottom:6px; }
-  #crumbs span { cursor:pointer; color:#185FA5; }
+  #crumbs span { cursor:pointer; color:var(--link); }
   #closeBtn { float:right; border:none; background:none; font-size:16px; cursor:pointer; color:var(--muted); }
-  .bar { height:6px; border-radius:3px; background:#eee; overflow:hidden; margin-top:2px; }
+  .bar { height:6px; border-radius:3px; background:var(--code-bg); overflow:hidden; margin-top:2px; }
   .bar i { display:block; height:100%; }
   #empty { padding:40px; font-size:15px; color:var(--muted); }
   #suggest { position:absolute; top:12px; left:12px; width:290px; max-height:calc(100% - 24px);
-             overflow-y:auto; background:#fff; border:1px solid var(--line); border-radius:10px;
+             overflow-y:auto; background:var(--panel); border:1px solid var(--line); border-radius:10px;
              padding:12px 14px; box-shadow:0 4px 18px rgba(0,0,0,.08); display:none; }
   #suggest h2 { font-size:13px; margin:0 0 8px; }
   .sugItem { padding:7px 8px; border:1px solid var(--line); border-radius:8px; margin-bottom:6px;
-             font-size:12.5px; cursor:pointer; background:#fff; }
+             font-size:12.5px; cursor:pointer; background:var(--panel); }
   .sugItem:hover { border-color:var(--ink); }
   .sugItem .act { color:var(--muted); font-size:11.5px; }
   .sugItem .score { float:right; color:var(--hot); font-weight:600; font-size:11.5px; }
   #refPanel { position:absolute; top:12px; right:12px; width:420px; max-height:calc(100% - 24px);
-              overflow-y:auto; background:#fff; border:1px solid var(--line); border-radius:10px;
+              overflow-y:auto; background:var(--panel); border:1px solid var(--line); border-radius:10px;
               padding:14px 16px; box-shadow:0 4px 18px rgba(0,0,0,.08); display:none; }
   #refPanel h2 { font-size:14px; margin:12px 0 6px; }
   #refPanel input { width:100%; font:inherit; font-size:13px; padding:5px 8px;
                     border:1px solid var(--line); border-radius:6px; margin-bottom:4px; }
   .refItem { padding:6px 0; border-bottom:1px solid var(--line); font-size:12.5px; }
   .refItem:last-child { border-bottom:none; }
-  .refItem code { background:#f4f2ea; padding:1px 6px; border-radius:4px; font-size:12px; }
+  .refItem code { background:var(--code-bg); padding:1px 6px; border-radius:4px; font-size:12px; }
   .refItem .desc { color:var(--muted); margin-top:2px; }
   #noteOverlay { position:fixed; inset:0; background:rgba(44,44,42,.35); display:none;
                  align-items:flex-start; justify-content:center; padding:40px 16px; z-index:50; }
-  #noteBox { background:#fff; border:1px solid var(--line); border-radius:12px; width:min(760px, 100%);
+  #noteBox { background:var(--panel); border:1px solid var(--line); border-radius:12px; width:min(760px, 100%);
              max-height:calc(100vh - 80px); display:flex; flex-direction:column;
              box-shadow:0 12px 40px rgba(0,0,0,.18); }
   #noteHead { display:flex; align-items:baseline; gap:10px; padding:14px 20px 10px;
@@ -84,18 +88,18 @@
                      cursor:pointer; color:var(--muted); }
   #noteBody { overflow-y:auto; padding:6px 24px 22px; font-size:13.5px; line-height:1.6; }
   #noteBody h1 { font-size:19px; } #noteBody h2 { font-size:16px; } #noteBody h3 { font-size:14px; }
-  #noteBody pre { background:#f4f2ea; padding:10px 12px; border-radius:8px; overflow-x:auto; font-size:12px; }
-  #noteBody code { background:#f4f2ea; padding:1px 5px; border-radius:4px; font-size:12px; }
+  #noteBody pre { background:var(--code-bg); padding:10px 12px; border-radius:8px; overflow-x:auto; font-size:12px; }
+  #noteBody code { background:var(--code-bg); padding:1px 5px; border-radius:4px; font-size:12px; }
   #noteBody pre code { background:none; padding:0; }
   #noteBody table { border-collapse:collapse; font-size:12.5px; margin:8px 0; display:block; overflow-x:auto; }
   #noteBody th, #noteBody td { border:1px solid var(--line); padding:4px 9px; text-align:left; }
-  #noteBody th { background:#f4f2ea; }
+  #noteBody th { background:var(--code-bg); }
   #noteBody blockquote { border-left:3px solid var(--line); margin:8px 0; padding:2px 14px; color:var(--muted); }
   #noteBody img { max-width:100%; }
   #noteBody .mermaid { background:none; text-align:center; }
   #noteBody code.hljs { background:transparent; }
   #noteBody .mermaid svg { max-width:100%; height:auto; }
-  #panel .noteLink { color:#185FA5; cursor:pointer; }
+  #panel .noteLink { color:var(--link); cursor:pointer; }
 </style>
 </head>
 <body>
@@ -109,12 +113,13 @@
   </label>
   <label><input type="checkbox" id="gapToggle"> show gaps</label>
   <label><input type="checkbox" id="divToggle"> divergence</label>
-  <button id="refBtn" style="font:inherit; font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer;">reference key</button>
-  <a href="dashboard.html" style="font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); text-decoration:none;">dashboard →</a>
+  <button id="refBtn" style="font:inherit; font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer;">reference key</button>
+  <a href="dashboard.html" style="font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:var(--panel); color:var(--ink); text-decoration:none;">dashboard →</a>
+  <button id="themeBtn" title="toggle dark mode" style="font:inherit; font-size:12.5px; padding:3px 8px; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer;">🌙</button>
   <div id="legend">
     <span><span class="dot" style="background:var(--strong)"></span>strong (≥3)</span>
     <span><span class="dot" style="background:var(--weak)"></span>weak</span>
-    <span><span class="dot" style="border:1.5px dashed #9a988f"></span>not yet covered</span>
+    <span><span class="dot" style="border:1.5px dashed var(--edge)"></span>not yet covered</span>
   </div>
 </header>
 <div id="stage">
@@ -138,7 +143,25 @@
 <script src="graph.data.js"></script>
 <script src="notes.data.js"></script>
 <script>
-if (window.mermaid) mermaid.initialize({startOnLoad: false, theme: 'neutral'});
+// ---- theme: dark toggle, persisted, defaults to system preference ----
+function applyTheme(dark) {
+  document.body.classList.toggle('dark', dark);
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.textContent = dark ? '☀️' : '🌙';
+  const css = document.getElementById('hljsCss');
+  if (css) css.href = dark ? 'hljs-github-dark.min.css' : 'hljs-github.min.css';
+  if (window.mermaid) {
+    mermaid.initialize({startOnLoad: false, theme: dark ? 'dark' : 'neutral'});
+  }
+}
+const savedTheme = localStorage.getItem('sb-theme');
+applyTheme(savedTheme ? savedTheme === 'dark'
+                      : matchMedia('(prefers-color-scheme: dark)').matches);
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const dark = !document.body.classList.contains('dark');
+  localStorage.setItem('sb-theme', dark ? 'dark' : 'light');
+  applyTheme(dark);
+});
 if (!window.GRAPH) {
   document.getElementById('stage').innerHTML =
     '<div id="empty">No graph data. Run: <code>python -m brain ui</code></div>';
