@@ -201,6 +201,8 @@ summary of your entire learning state, made to be pasted into any assistant
 python -m brain readiness <goal-id>
 python -m brain context
 ```
+Or just type `/context` in the chat — it runs the export and hands you the
+block ready to copy (add a goal name to scope it, e.g. `/context <goal-id>`).
 The context export fits on one screen and contains no note contents — just
 topic names and states — so it's safe to paste around.
 
