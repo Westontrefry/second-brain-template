@@ -21,7 +21,7 @@ REQUIRED = (
     "id", "domain", "topics", "source", "confidence", "importance",
     "goals", "created", "last_reviewed", "exposure_count",
 )
-OPTIONAL = ("ai_confidence", "ai_confidence_rationale", "last_assessed")
+OPTIONAL = ("ai_confidence", "ai_confidence_rationale", "last_assessed", "title")
 
 
 @dataclass

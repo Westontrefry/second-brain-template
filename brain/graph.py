@@ -34,7 +34,7 @@ def _note_records() -> list[dict]:
             continue
         m = note.meta
         records.append({
-            "id": m["id"], "path": str(path), "domain": m["domain"],
+            "id": m["id"], "title": m.get("title"), "path": str(path), "domain": m["domain"],
             "topics": m["topics"], "goals": m["goals"],
             "confidence": m["confidence"], "ai_confidence": m.get("ai_confidence"),
             "last_reviewed": str(m["last_reviewed"]),
@@ -69,7 +69,7 @@ def build(today: dt.date | None = None) -> dict:
             n["domains"][rec["domain"]] += 1
             n["sources"][rec["source"]] += 1
             n["notes"].append({
-                "id": rec["id"], "path": rec["path"],
+                "id": rec["id"], "title": rec["title"], "path": rec["path"],
                 "confidence": rec["confidence"], "lastReviewed": rec["last_reviewed"],
             })
 

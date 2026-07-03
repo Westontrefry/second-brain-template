@@ -138,6 +138,7 @@ def import_dir(
 
         frontmatter = {
             "id": note_id,
+            "title": title,
             "domain": note_domain,
             "topics": topics,
             "source": "import",

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import sys
 from pathlib import Path
 
@@ -59,6 +60,7 @@ def cmd_add(args: argparse.Namespace) -> int:
     frontmatter = (
         f"---\n"
         f"id: {note_id}\n"
+        f"title: {json.dumps(args.title)}\n"
         f"domain: {args.domain}\n"
         f"topics: [{topics}]\n"
         f"source: {args.source}\n"

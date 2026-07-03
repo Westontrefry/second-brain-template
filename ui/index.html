@@ -101,6 +101,8 @@
   #noteBody code.hljs { background:transparent; }
   #noteBody .mermaid svg { max-width:100%; height:auto; }
   #panel .noteLink { color:var(--link); cursor:pointer; }
+  #panel #noteFilter { width:100%; font:inherit; font-size:12.5px; padding:4px 8px;
+                       border:1px solid var(--line); border-radius:6px; margin:2px 0 6px; }
 </style>
 </head>
 <body>
@@ -315,7 +317,7 @@ function drill(id, push) {
     `<tr><td>${r.name} <span style="color:var(--muted)">(${r.goal})</span></td>
      <td>${n.evidenced}/${r.required}${r.gap > 0 ? ' ⚠' : ' ✓'}</td></tr>`).join('');
   const noteRows = (n.notes || []).map(nt =>
-    `<div><span class="noteLink" data-view="${nt.id}">${noteLabel(nt.id)}</span>
+    `<div><span class="noteLink" data-view="${nt.id}">${nt.title || noteLabel(nt.id)}</span>
      <span style="color:var(--muted)">conf ${nt.confidence} · ${nt.lastReviewed}</span></div>`).join('');
   const nbrChips = [...neighborSet(id)].filter(x => x !== id).map(x =>
     `<span class="chip" data-drill="${x}">${x}</span>`).join('') || '<span class="sub">none</span>';
@@ -336,7 +338,9 @@ function drill(id, push) {
     ${reqRows ? '<h3>Required by goals</h3><table>' + reqRows + '</table>' : ''}
     ${Object.keys(n.sources || {}).length ? '<h3>Evidence mix</h3><table>' +
       Object.entries(n.sources).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('') + '</table>' : ''}
-    ${noteRows ? '<h3>Notes (' + n.notes.length + ')</h3>' + noteRows : ''}
+    ${noteRows ? '<h3>Notes (' + n.notes.length + ')</h3>'
+      + (n.notes.length > 5 ? '<input id="noteFilter" placeholder="filter notes…">' : '')
+      + '<div id="noteList">' + noteRows + '</div>' : ''}
     <h3>Connected topics — drill in</h3>${nbrChips}`;
   panel.style.display = 'block';
   panel.querySelectorAll('[data-drill]').forEach(el =>
@@ -346,6 +350,15 @@ function drill(id, push) {
       (n.notes || []).find(x => x.id === el.dataset.view))));
   panel.querySelectorAll('[data-crumb]').forEach(el =>
     el.addEventListener('click', () => { crumbs = crumbs.slice(0, +el.dataset.crumb + 1); drill(crumbs.at(-1), false); }));
+  const noteFilter = panel.querySelector('#noteFilter');
+  if (noteFilter) {
+    noteFilter.addEventListener('input', () => {
+      const q = noteFilter.value.trim().toLowerCase();
+      panel.querySelectorAll('#noteList > div').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
   panel.querySelector('#closeBtn').addEventListener('click', clearFocus);
 }
 function clearFocus() {
@@ -419,7 +432,7 @@ function viewNote(id, meta) {
   const overlay = document.getElementById('noteOverlay');
   const body = (window.NOTES || {})[id];
   document.getElementById('noteHead').innerHTML = `
-    <h2>${noteLabel(id)}</h2>
+    <h2>${(meta && meta.title) || noteLabel(id)}</h2>
     <span class="sub">${meta ? `conf ${meta.confidence} · ${meta.lastReviewed}` : ''}</span>
     <button id="noteClose" title="close">✕</button>`;
   const nb = document.getElementById('noteBody');
