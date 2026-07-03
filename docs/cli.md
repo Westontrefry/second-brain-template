@@ -66,7 +66,9 @@ brain assess databases --level 4 --evidence 2026-07-02-btree-vs-hash-indexes \
 ```
 Writes ai_confidence + rationale + last_assessed onto the evidence notes (which must
 carry the topic); self-assessed `confidence` is never touched. Used by /quiz.
+Also appends one line to `events.jsonl` (append-only history for time-series views).
 
 ## log-exposure
 `brain log-exposure <topic>` — records a review event: bumps exposure_count and
 last_reviewed on every note carrying the topic (refreshes decay). Used by /review.
+Also appends one line to `events.jsonl`.

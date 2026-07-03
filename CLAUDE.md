@@ -24,6 +24,13 @@ personalization runbook.
 - After each batch of changes: `brain validate`, then `pytest -m "not e2e"`,
   then commit. Every few batches: `brain ingest` and `brain graph`.
 
+## Docs stay current
+
+- docs/demo-guide.md is the layman's tour the user shares when demoing the
+  system. Any change that adds, removes, or renames a user-facing capability
+  (skill, CLI command, UI view) updates that guide in the same commit, in the
+  same casual plain-English voice.
+
 ## Design constraints (do not erode)
 
 - $0 operating cost: no paid APIs, no servers, no new heavyweight dependencies.

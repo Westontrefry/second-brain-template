@@ -64,6 +64,9 @@ def assess(topic: str, level: float, rationale: str, evidence_ids: list[str],
             "ai_confidence_rationale": rationale,
             "last_assessed": today.isoformat(),
         })
+    from .events import append_event
+    append_event("assess", topic=topic, level=level, rationale=rationale,
+                 evidence=evidence_ids)
     return paths
 
 
@@ -82,4 +85,6 @@ def log_exposure(topic: str, today: dt.date | None = None) -> list[Path]:
         updated.append(path)
     if not updated:
         raise ValueError(f"no notes carry topic {topic!r}")
+    from .events import append_event
+    append_event("exposure", topic=topic, notes=len(updated))
     return updated

@@ -8,6 +8,7 @@ paths:
   rubric_file: rubrics/depth.yaml
   db_path: brain.db
   graph_json: ui/graph.json
+  events_file: events.jsonl   # append-only assessment/exposure history (committed)
 
 # Seed domains — rename or replace freely; they are just folders + list entries.
 domains:
