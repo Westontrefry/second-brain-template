@@ -49,8 +49,10 @@ Lines connect topics that show up together.
 python -m brain ui
 ```
 Your browser opens the map. Click any dot to zoom into its neighborhood and
-see the actual notes behind it. Use the **Goal** dropdown to show only what
-matters for one goal, and tick **show gaps** to light up what's missing.
+see the actual notes behind it — and **click any note in that list to read
+it right there**, nicely formatted, without leaving the map. Use the **Goal**
+dropdown to show only what matters for one goal, and tick **show gaps** to
+light up what's missing.
 
 ### 2. Check the dashboard
 **What it is:** click **dashboard →** in the map's header. Three pictures:

@@ -59,6 +59,20 @@ def test_export_writes_file_uri_safe_data_js(sandbox):
     assert (sandbox / "ui" / "graph.json").exists()
 
 
+def test_export_bundles_note_bodies_for_viewer(sandbox):
+    import json
+
+    export(today=TODAY)
+    text = (sandbox / "ui" / "notes.data.js").read_text(encoding="utf-8")
+    assert text.startswith("window.NOTES = ")
+    bodies = json.loads(text[len("window.NOTES = "):].rstrip().rstrip(";"))
+    # every fixture note id present, bodies non-empty markdown
+    assert "2026-07-02-btree-vs-hash-indexes" in bodies
+    assert all(b.strip() for b in bodies.values())
+    # bodies only — frontmatter stays out of the bundle
+    assert not any(b.lstrip().startswith("---") for b in bodies.values())
+
+
 def test_reference_derived_from_skills_and_parser(sandbox):
     from brain.graph import _load_reference
 

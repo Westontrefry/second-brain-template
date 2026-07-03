@@ -4,6 +4,7 @@ __pycache__/
 *.db
 ui/graph.json
 ui/graph.data.js
+ui/notes.data.js
 .DS_Store
 .claude/scheduled_tasks.lock
 .claude/settings.local.json

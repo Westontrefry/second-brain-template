@@ -193,6 +193,18 @@ def _load_reference() -> dict:
     return {"skills": skills, "cli": cli}
 
 
+def _note_bodies() -> dict[str, str]:
+    """Full note bodies keyed by id, bundled for the UI's markdown viewer.
+    Written to a separate data file so graph.json stays lean."""
+    bodies: dict[str, str] = {}
+    for path in sorted(knowledge_dir().rglob("*.md")):
+        note, _ = parse_note(path)
+        if note is None or validate_note(note):
+            continue
+        bodies[note.meta["id"]] = note.body
+    return bodies
+
+
 def _load_paths() -> list[dict]:
     paths_dir = root() / "ui" / "paths"
     overlays = []
@@ -220,6 +232,10 @@ def export(today: dt.date | None = None) -> Path:
         "window.GRAPH = " + json.dumps(graph) + ";\n"
         + "window.PATHS = " + json.dumps(_load_paths()) + ";\n"
         + "window.REFERENCE = " + json.dumps(_load_reference()) + ";\n",
+        encoding="utf-8",
+    )
+    (ui_dir / "notes.data.js").write_text(
+        "window.NOTES = " + json.dumps(_note_bodies()) + ";\n",
         encoding="utf-8",
     )
     return data_js

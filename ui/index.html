@@ -69,6 +69,28 @@
   .refItem:last-child { border-bottom:none; }
   .refItem code { background:#f4f2ea; padding:1px 6px; border-radius:4px; font-size:12px; }
   .refItem .desc { color:var(--muted); margin-top:2px; }
+  #noteOverlay { position:fixed; inset:0; background:rgba(44,44,42,.35); display:none;
+                 align-items:flex-start; justify-content:center; padding:40px 16px; z-index:50; }
+  #noteBox { background:#fff; border:1px solid var(--line); border-radius:12px; width:min(760px, 100%);
+             max-height:calc(100vh - 80px); display:flex; flex-direction:column;
+             box-shadow:0 12px 40px rgba(0,0,0,.18); }
+  #noteHead { display:flex; align-items:baseline; gap:10px; padding:14px 20px 10px;
+              border-bottom:1px solid var(--line); }
+  #noteHead h2 { font-size:15px; margin:0; }
+  #noteHead .sub { color:var(--muted); font-size:11.5px; }
+  #noteHead button { margin-left:auto; border:none; background:none; font-size:17px;
+                     cursor:pointer; color:var(--muted); }
+  #noteBody { overflow-y:auto; padding:6px 24px 22px; font-size:13.5px; line-height:1.6; }
+  #noteBody h1 { font-size:19px; } #noteBody h2 { font-size:16px; } #noteBody h3 { font-size:14px; }
+  #noteBody pre { background:#f4f2ea; padding:10px 12px; border-radius:8px; overflow-x:auto; font-size:12px; }
+  #noteBody code { background:#f4f2ea; padding:1px 5px; border-radius:4px; font-size:12px; }
+  #noteBody pre code { background:none; padding:0; }
+  #noteBody table { border-collapse:collapse; font-size:12.5px; margin:8px 0; display:block; overflow-x:auto; }
+  #noteBody th, #noteBody td { border:1px solid var(--line); padding:4px 9px; text-align:left; }
+  #noteBody th { background:#f4f2ea; }
+  #noteBody blockquote { border-left:3px solid var(--line); margin:8px 0; padding:2px 14px; color:var(--muted); }
+  #noteBody img { max-width:100%; }
+  #panel .noteLink { color:#185FA5; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -96,8 +118,16 @@
   <aside id="panel"></aside>
   <aside id="refPanel"></aside>
 </div>
+<div id="noteOverlay">
+  <div id="noteBox">
+    <div id="noteHead"></div>
+    <div id="noteBody"></div>
+  </div>
+</div>
 <script src="d3.v7.min.js"></script>
+<script src="marked.min.js"></script>
 <script src="graph.data.js"></script>
+<script src="notes.data.js"></script>
 <script>
 if (!window.GRAPH) {
   document.getElementById('stage').innerHTML =
@@ -217,7 +247,7 @@ function drill(id, push) {
     `<tr><td>${r.name} <span style="color:var(--muted)">(${r.goal})</span></td>
      <td>${n.evidenced}/${r.required}${r.gap > 0 ? ' ⚠' : ' ✓'}</td></tr>`).join('');
   const noteRows = (n.notes || []).map(nt =>
-    `<div><a href="file://${nt.path}">${nt.id}</a>
+    `<div><span class="noteLink" data-view="${nt.id}">${nt.id}</span>
      <span style="color:var(--muted)">conf ${nt.confidence} · ${nt.lastReviewed}</span></div>`).join('');
   const nbrChips = [...neighborSet(id)].filter(x => x !== id).map(x =>
     `<span class="chip" data-drill="${x}">${x}</span>`).join('') || '<span class="sub">none</span>';
@@ -243,6 +273,9 @@ function drill(id, push) {
   panel.style.display = 'block';
   panel.querySelectorAll('[data-drill]').forEach(el =>
     el.addEventListener('click', () => drill(el.dataset.drill, true)));
+  panel.querySelectorAll('[data-view]').forEach(el =>
+    el.addEventListener('click', () => viewNote(el.dataset.view,
+      (n.notes || []).find(x => x.id === el.dataset.view))));
   panel.querySelectorAll('[data-crumb]').forEach(el =>
     el.addEventListener('click', () => { crumbs = crumbs.slice(0, +el.dataset.crumb + 1); drill(crumbs.at(-1), false); }));
   panel.querySelector('#closeBtn').addEventListener('click', clearFocus);
@@ -252,6 +285,27 @@ function clearFocus() {
   document.getElementById('panel').style.display = 'none';
   applyModes();
 }
+
+// ---- markdown note viewer (bodies bundled in notes.data.js) ----
+function viewNote(id, meta) {
+  const overlay = document.getElementById('noteOverlay');
+  const body = (window.NOTES || {})[id];
+  document.getElementById('noteHead').innerHTML = `
+    <h2>${id}</h2>
+    <span class="sub">${meta ? `conf ${meta.confidence} · ${meta.lastReviewed}` : ''}</span>
+    <button id="noteClose" title="close">✕</button>`;
+  document.getElementById('noteBody').innerHTML =
+    body === undefined
+      ? '<p style="color:var(--muted)">Note body not bundled — run <code>python -m brain graph</code> to refresh.</p>'
+      : (window.marked ? marked.parse(body) : `<pre>${body.replace(/</g, '&lt;')}</pre>`);
+  overlay.style.display = 'flex';
+  document.getElementById('noteClose').addEventListener('click', closeNote);
+}
+function closeNote() { document.getElementById('noteOverlay').style.display = 'none'; }
+document.getElementById('noteOverlay').addEventListener('click', e => {
+  if (e.target.id === 'noteOverlay') closeNote();
+});
+window.addEventListener('keydown', e => { if (e.key === 'Escape') closeNote(); });
 
 let route = null;
 function drawRoute() {
