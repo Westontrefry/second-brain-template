@@ -50,6 +50,11 @@
     <div class="sub">self-confidence vs AI-assessed level per topic — dots below the line are overconfidence</div>
     <div id="scatter"></div>
   </div>
+  <div class="card" id="treemapCard">
+    <h2>Knowledge real estate</h2>
+    <div class="sub">box size = topic weight (share of everything you know), grouped by domain — hover for exact share</div>
+    <div id="treemap"></div>
+  </div>
 </div>
 <script src="d3.v7.min.js"></script>
 <script src="graph.data.js"></script>
@@ -172,10 +177,60 @@ function drawScatter() {
     .attr('font-size', '10px').attr('fill', 'var(--muted)').text(d => d.label);
 }
 
+// ---- knowledge real-estate treemap ----
+function drawTreemap() {
+  const topics = G.nodes.filter(n => n.type === 'topic' && n.weight > 0);
+  const rootEl = d3.select('#treemap');
+  rootEl.selectAll('*').remove();
+  if (!topics.length) {
+    rootEl.append('div').attr('class', 'empty').text('No weighted topics yet.');
+    return;
+  }
+  const byDomain = d3.group(topics, t => t.domain || 'other');
+  const data = {children: [...byDomain].map(([dom, ts]) => ({
+    name: dom, children: ts.map(t => ({name: t.label, value: t.weight})),
+  }))};
+  const W = 640, H = 460;
+  const root = d3.hierarchy(data)
+    .sum(d => d.value)
+    .sort((a, b) => b.value - a.value);
+  d3.treemap().size([W, H]).paddingInner(1.5).paddingTop(17)(root);
+  const color = d3.scaleOrdinal(
+    [...byDomain.keys()],
+    ['#1D9E75', '#EF9F27', '#7F77DD', '#378ADD', '#D85A30', '#9a988f']);
+  const total = root.value;
+  const svg = rootEl.append('svg').attr('width', W).attr('height', H);
+  // domain group frames + labels
+  const groups = svg.selectAll('g.dom').data(root.children).join('g').attr('class', 'dom');
+  groups.append('text')
+    .attr('x', d => d.x0 + 4).attr('y', d => d.y0 + 12)
+    .attr('font-size', '10.5px').attr('font-weight', 600)
+    .attr('fill', d => color(d.data.name))
+    .text(d => `${d.data.name} — ${(d.value / total * 100).toFixed(0)}%`);
+  // topic cells
+  const leaf = svg.selectAll('g.leaf').data(root.leaves()).join('g')
+    .attr('class', 'leaf').attr('transform', d => `translate(${d.x0},${d.y0})`);
+  leaf.append('rect')
+    .attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0)
+    .attr('fill', d => color(d.parent.data.name)).attr('fill-opacity', .55)
+    .attr('stroke', '#fff').attr('stroke-width', .5)
+    .append('title')
+    .text(d => `${d.data.name} — ${(d.value / total * 100).toFixed(1)}% of total weight`);
+  leaf.filter(d => (d.x1 - d.x0) > 58 && (d.y1 - d.y0) > 15)
+    .append('text')
+    .attr('x', 3).attr('y', 11).attr('font-size', '9.5px').attr('fill', '#3a3a37')
+    .attr('pointer-events', 'none')
+    .text(d => {
+      const w = d.x1 - d.x0, max = Math.floor(w / 5.4);
+      return d.data.name.length > max ? d.data.name.slice(0, max - 1) + '…' : d.data.name;
+    });
+}
+
 if (goals.length) drawRadar(goals[0].id);
 else document.getElementById('radarCard').innerHTML +=
   '<div class="empty">No roadmaps found under goals/roadmaps/.</div>';
 drawScatter();
+drawTreemap();
 }
 </script>
 </body>

@@ -53,7 +53,7 @@ see the actual notes behind it. Use the **Goal** dropdown to show only what
 matters for one goal, and tick **show gaps** to light up what's missing.
 
 ### 2. Check the dashboard
-**What it is:** click **dashboard →** in the map's header. Two pictures:
+**What it is:** click **dashboard →** in the map's header. Three pictures:
 
 - **Readiness radar** — one glance answers *"am I ready for this goal?"* The
   green shape is what you know; the dashed outline is what the goal requires.
@@ -62,6 +62,10 @@ matters for one goal, and tick **show gaps** to light up what's missing.
   comparing how confident you *felt* vs how you *performed*. Dots below the
   line = overconfident (feelings ahead of evidence). Above = you're better
   than you think.
+- **Knowledge real estate** — every topic as a box; bigger box = more of your
+  knowledge lives there, grouped and color-coded by area. Hover any box for
+  its exact share. Great for spotting "wait, why is THAT taking up so much
+  room?" moments.
 
 ### 3. Save something you just learned
 **What it is:** the daily habit. Studied something? Struggled with something?
@@ -137,8 +141,7 @@ against your evidence and sorts by what's most urgent and most missing.
 ```
 python -m brain gaps
 ```
-Or for one goal: `python -m brain gaps --goal <goal-id>` (goal ids live in
-`goals/goals.yaml`)
+Or for one goal: `python -m brain gaps --goal <goal-id>`
 
 ### 10. Chart a path to a custom goal
 **What it is:** for objectives that aren't one of your set goals ("get ready
