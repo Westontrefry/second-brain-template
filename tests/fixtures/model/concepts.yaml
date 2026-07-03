@@ -1,0 +1,244 @@
+# KME canonical concept registry (COMMITTED SOURCE).
+# One entry per concept: canonical slug id, display name, and the alias
+# vocabulary that joins it to note topics (slugify match, same rule as
+# roadmap aliases). An alias may belong to only one concept.
+# Grows via `brain model import` and by hand — where your note vocabulary
+# doesn't match, add an alias here; never rename note topics.
+# (frozen test fixture)
+concepts:
+- id: ai-innovation
+  name: Innovating with AI (ML options, generative AI, AI tools)
+  aliases:
+  - ai agents
+  - ai models
+  - ai tools
+  - gemini
+  - generative ai
+  - llms
+  - machine learning basics
+  - multimodal models
+  - prompt engineering
+- id: arrays-strings
+  name: Arrays and strings
+  aliases:
+  - arrays
+  - strings
+- id: big-o
+  name: Complexity analysis
+  aliases:
+  - asymptotic analysis
+  - complexity
+  - time complexity
+- id: binary-search
+  name: Binary search and variants
+  aliases: []
+- id: cloud-concepts
+  name: Cloud concepts (IaaS/PaaS/SaaS, deployment models, infrastructure)
+  aliases:
+  - bandwidth latency
+  - cloud computing
+  - deployment models
+  - edge network
+  - iaas paas saas
+- id: cloud-storage
+  name: Cloud Storage (classes, lifecycle, access)
+  aliases:
+  - gcs
+  - object storage
+  - storage classes
+- id: compute-engine
+  name: Compute Engine (VMs, instance groups, images)
+  aliases:
+  - gce
+  - instance groups
+  - vms
+- id: data-transformation
+  name: Exploring data transformation (databases, warehouses, analytics)
+  aliases:
+  - data analysis
+  - data governance
+  - data management
+  - data quality
+  - looker
+  - streaming analytics
+- id: databases
+  name: SQL and indexing fundamentals
+  aliases:
+  - b-trees
+  - indexing
+  - relational algebra
+  - sql
+- id: deployment
+  name: Deploying workloads (MIGs, GKE deploys, IaC basics)
+  aliases:
+  - deployment manager
+  - terraform
+- id: digital-transformation
+  name: Digital transformation with Google Cloud
+  aliases:
+  - cloud adoption
+  - cloud history
+  - innovation
+- id: dynamic-programming
+  name: Dynamic programming
+  aliases:
+  - dp
+  - memoization
+  - tabulation
+- id: financial-governance
+  name: Cloud financial governance (CapEx/OpEx, TCO, cost management)
+  aliases:
+  - capex opex
+  - cost management
+  - tco
+  - total cost of ownership
+- id: gcloud-cli
+  name: gcloud / gsutil / bq command line
+  aliases:
+  - cloud sdk
+  - gcloud
+- id: gke
+  name: Google Kubernetes Engine
+  aliases:
+  - k8s
+  - kubernetes
+- id: graphs
+  name: Graphs, BFS/DFS, topological sort
+  aliases:
+  - adjacency list
+  - bfs
+  - dfs
+  - dijkstra
+  - edge list
+  - graph traversal
+  - minimum spanning tree
+  - shortest paths
+  - topological sort
+- id: hash-maps
+  name: Hash maps and sets
+  aliases:
+  - dictionaries
+  - hash functions
+  - hash tables
+  - hashing
+  - maps
+  - sets
+- id: heaps
+  name: Heaps and priority queues
+  aliases:
+  - priority queue
+  - priority queues
+- id: iam
+  name: IAM roles, members, service accounts
+  aliases:
+  - gcp iam
+  - iam basics
+  - service accounts
+- id: linked-lists
+  name: Linked lists
+  aliases: []
+- id: load-balancing
+  name: Load balancing and DNS
+  aliases:
+  - cloud dns
+  - cloud load balancing
+- id: managed-databases
+  name: Cloud SQL, Firestore, BigQuery basics
+  aliases:
+  - bigquery
+  - cloud sql
+  - database migration
+  - firestore
+- id: modernization
+  name: Modernizing infrastructure and applications
+  aliases:
+  - application modernization
+  - google workspace
+  - hybrid cloud
+  - migration
+- id: operations
+  name: Monitoring, logging, alerting (ops suite)
+  aliases:
+  - cloud logging
+  - cloud monitoring
+  - observability
+- id: recursion-backtracking
+  name: Recursion and backtracking
+  aliases:
+  - backtracking
+  - recursion
+- id: resource-hierarchy
+  name: Projects, folders, orgs, billing structure
+  aliases:
+  - billing
+  - cloud infrastructure
+  - gcp resource hierarchy
+  - projects
+  - regions and zones
+- id: responsible-ai
+  name: Responsible AI and AI governance
+  aliases:
+  - ai ethics
+- id: scaling-operations
+  name: Scaling with Google Cloud operations (SRE, support, sustainability)
+  aliases:
+  - sre
+  - sustainability operations
+- id: serverless
+  name: Cloud Run, Cloud Functions, App Engine
+  aliases:
+  - app engine
+  - cloud functions
+  - cloud run
+- id: sorting
+  name: Sorting algorithms and applications
+  aliases:
+  - bubble sort
+  - insertion sort
+  - mergesort
+  - quicksort
+  - selection sort
+  - sorting-searching
+- id: stacks-queues
+  name: Stacks and queues
+  aliases:
+  - monotonic stack
+  - queue
+  - queues
+  - stack
+  - stacks
+- id: system-design-basics
+  name: System design fundamentals (new-grad level)
+  aliases:
+  - caching
+  - scalability
+  - system design
+- id: trees
+  name: Trees and BSTs
+  aliases:
+  - avl trees
+  - balanced trees
+  - binary trees
+  - bst
+  - red-black trees
+  - splay trees
+  - tree traversal
+- id: trust-security
+  name: Trust, security, and compliance (shared responsibility)
+  aliases:
+  - compliance
+  - encryption
+  - privacy
+  - security
+  - shared responsibility
+- id: two-pointers
+  name: Two pointers and sliding window
+  aliases:
+  - sliding window
+- id: vpc-networking
+  name: VPC, subnets, firewall rules, routes
+  aliases:
+  - firewall
+  - networking
+  - subnets
+  - vpc

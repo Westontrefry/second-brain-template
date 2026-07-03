@@ -12,7 +12,7 @@ from dataclasses import dataclass
 import yaml
 
 from .config import load_config, root
-from .util import slugify
+from .util import slug_keys, slugify
 from .weights import TopicStats, collect
 
 STALE_DAYS = 120
@@ -57,7 +57,7 @@ def _urgency(deadline: object, today: dt.date) -> float:
 
 def _topic_evidence(entry: dict, stats: dict[str, TopicStats]) -> tuple[float, str]:
     """Best evidenced level and latest review date across the topic's aliases."""
-    keys = {slugify(entry["id"])} | {slugify(a) for a in entry.get("aliases", [])}
+    keys = slug_keys(entry["id"], entry.get("aliases", []))
     level, last = 0.0, ""
     for topic, s in stats.items():
         if slugify(topic) in keys:

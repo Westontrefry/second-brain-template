@@ -333,7 +333,7 @@ function drill(id, push) {
     <button id="closeBtn" title="close">✕</button>
     <div id="crumbs">${crumbHtml}</div>
     <h2>${n.label}</h2>
-    <div class="sub">${n.type === 'missing' ? 'not yet covered' : (n.domain || '')} · weight ${n.weight}</div>
+    <div class="sub">${n.type === 'missing' ? 'not yet covered' : (n.domain || '')} · weight ${n.weight}${n.convergence ? ` · in ${n.convergence} track${n.convergence > 1 ? 's' : ''}` : ''}</div>
     <h3>Evidenced level</h3>
     <div>${n.evidenced} / 5</div>
     <div class="bar"><i style="width:${pct}%;background:${n.evidenced >= 3 ? 'var(--strong)' : 'var(--weak)'}"></i></div>

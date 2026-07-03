@@ -65,6 +65,29 @@ needs a name, it gets defined here first.
 - **exposure event** — a review recorded by `brain log-exposure`: bumps
   exposure_count and last_reviewed, refreshing decay.
 
+## Knowledge model (KME)
+
+- **concept** — one canonical entry in `model/concepts.yaml` (the **registry**):
+  a slug id, display name, and aliases. The cross-domain unit of the knowledge
+  model; note topics join concepts by the same slugify rule roadmaps use. An
+  alias belongs to exactly one concept.
+- **track** — one imported learning resource (`model/tracks/<slug>.yaml`):
+  ordered **units** of concept refs plus prereq edges, each edge carrying
+  **provenance** (why the edge exists, quoting its source) and **confidence**
+  (1.0 = explicit in the source, lower = inferred, e.g. 0.5 from outline
+  order). Roadmaps load as tracks in memory — they are never materialized.
+- **adapter** — the parser that turns a resource into a track (`outline` for
+  markdown syllabi, `roadmap` for roadmap-format YAML).
+- **learning state** — the named classification of a concept's existing
+  evidence: **mastered / learning / weak / stale / missing** (thresholds in
+  `config.yaml model.state`). A thin layer over weights.py + events.jsonl —
+  never a second store. Every state carries its **reason** ("because").
+- **convergence** — how many tracks touch a concept; high convergence = learn
+  it once, it pays off in several places. Shown in the UI drill-down panel.
+- **readiness** — per-track report (`brain readiness`) where every line
+  self-explains; **context export** — the one-screen YAML (`brain context`)
+  that ports learning state into any AI assistant.
+
 ## Pipeline
 
 - **import** — bringing EXTERNAL files (Joplin/Obsidian exports) into `knowledge/`

@@ -20,6 +20,12 @@ notes), chunking behavior. Files: `test_schema.py`, `test_chunking.py`.
 decay halves at half-life, self-confidence caps at level 3, ai_confidence overrides,
 one note strengthens many topics, project evidence outweighs reading, alias matching,
 prereq blocking, satisfied topics disappear. Files: `test_weights.py`, `test_gaps.py`.
+The knowledge model (KME) lives here too: registry alias resolution + dup detection,
+roadmap-track blocking parity with gaps.py, outline parsing + idempotent import,
+state thresholds + convergence, self-explaining readiness lines, context export
+shape, and the graph track layer. Files: `test_model_registry.py`,
+`test_model_tracks.py`, `test_model_outline.py`, `test_model_compile.py`,
+`test_model_readiness.py`, `test_model_context.py`, `test_graph_tracks.py`.
 
 **L3 — end-to-end (marked `e2e`, real embeddings).** Drives the actual CLI as
 subprocesses through the full lifecycle: validate → ingest → search → add → rebuild →
@@ -35,9 +41,10 @@ SKILL.md.
 ## Sandboxing
 
 Every test runs against a sandbox in a tmp dir, selected via the `BRAIN_ROOT`
-env var (`tests/conftest.py::sandbox`): live config/goals/rubrics plus a frozen
-knowledge set (`tests/fixtures/knowledge/` — the four original seed notes; the
-live `knowledge/` tree grows with use and would make assertions data-dependent).
+env var (`tests/conftest.py::sandbox`): the live config.yaml plus frozen fixtures
+for goals, rubrics, the concept registry, and the knowledge set
+(`tests/fixtures/{goals,rubrics,model,knowledge}` — so personalizing your goals,
+roadmaps, or registry never breaks the suite).
 Tests never touch the real knowledge base or index. `write_note()` in conftest
 builds synthetic notes.
 

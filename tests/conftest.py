@@ -1,8 +1,9 @@
 """Test fixtures. Every test runs against a sandbox in tmp_path (selected via
 BRAIN_ROOT) built ENTIRELY from frozen fixtures (tests/fixtures/{goals,rubrics,
-knowledge}) plus the live config.yaml. Goals and rubrics are frozen too, so
-personalizing goals/goals.yaml or roadmaps never breaks the suite; tests never
-touch the real knowledge base or index."""
+knowledge,model}) plus the live config.yaml. Goals, rubrics, and the concept
+registry are frozen too, so personalizing goals/goals.yaml, roadmaps, or
+model/concepts.yaml never breaks the suite; tests never touch the real
+knowledge base or index."""
 from __future__ import annotations
 
 import shutil
@@ -16,7 +17,7 @@ REPO = Path(__file__).resolve().parent.parent
 @pytest.fixture()
 def sandbox(tmp_path, monkeypatch) -> Path:
     shutil.copy(REPO / "config.yaml", tmp_path / "config.yaml")
-    for d in ("goals", "rubrics", "knowledge"):
+    for d in ("goals", "rubrics", "knowledge", "model"):
         shutil.copytree(REPO / "tests" / "fixtures" / d, tmp_path / d)
     shutil.copytree(REPO / ".claude" / "skills", tmp_path / ".claude" / "skills")
     monkeypatch.setenv("BRAIN_ROOT", str(tmp_path))

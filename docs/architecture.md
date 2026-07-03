@@ -5,9 +5,12 @@ Terms used here are defined in [glossary.md](glossary.md).
 ## The one principle
 
 **Markdown is the source of truth; everything else is derived and disposable.**
-`knowledge/` + `goals/` + `rubrics/` + `config.yaml` fully determine the system's
-state. The index (`brain.db`), graph JSON, and any UI can be deleted and rebuilt
-losslessly. This is what makes the knowledge vendor- and model-portable.
+`knowledge/` + `goals/` + `rubrics/` + `model/` + `config.yaml` fully determine
+the system's state. The index (`brain.db`), graph JSON, and any UI can be deleted
+and rebuilt losslessly. This is what makes the knowledge vendor- and model-portable.
+(`model/` is the Knowledge Model Engine's committed source: `concepts.yaml`, the
+canonical concept registry, and `tracks/*.yaml`, imported learning resources —
+adapter-imported structure doesn't exist in notes, so it must be source, not cache.)
 
 ## Data flow
 
@@ -23,6 +26,17 @@ knowledge/*.md  goals/*.yaml  rubrics/depth.yaml        (source of truth, git-ve
       ├── retrieve.py   semantic search + metadata filters
       ├── weights.py    topic weight + evidenced level (no DB needed)
       ├── gaps.py       roadmap diff -> ranked gaps
+      ├── model/        Knowledge Model Engine (KME):
+      │     registry.py   model/concepts.yaml load/validate/resolve/merge
+      │     tracks.py     track schema + IN-MEMORY roadmap adapter (roadmaps
+      │                   stay the single source; no materialized copy)
+      │     outline.py    markdown syllabus parser (headings -> units)
+      │     imports.py    `model import` pipeline (terms -> registry -> track)
+      │     compile.py    registry+tracks+learning state; convergence; the
+      │                   state classifier is a THIN layer over weights.py +
+      │                   events.jsonl (thresholds: config.yaml model.state)
+      │     readiness.py  explainable per-track report (every line self-explains)
+      │     context.py    one-screen AI-consumable learning-state export
       └── llm/          provider interface (claude_code now, APIs later)
       │
       ▼

@@ -58,6 +58,41 @@ suggestions tab, and a "? reference" tab — a filterable dictionary of every
 skill and CLI command, derived at export time from SKILL.md frontmatter and
 the argument parser (it can't drift from reality).
 
+## model import
+Teach the knowledge model a learning resource (the Knowledge Model Engine —
+see [architecture.md](architecture.md)).
+```
+brain model import ~/Downloads/course-syllabus.md --dry-run    # preview
+brain model import syllabus.md --track os-course               # slug override
+brain model import some-plan.yaml --adapter roadmap            # roadmap-format file
+```
+- Adapters: `outline` (markdown headings = units, list items = concept terms;
+  order-based prereq edges at confidence 0.5) and `roadmap` (explicit prereqs,
+  confidence 1.0). Default by extension (.md outline, .yaml roadmap).
+- Writes `model/tracks/<slug>.yaml`; unknown terms are appended to
+  `model/concepts.yaml` as new concepts (known vocabulary canonicalizes via
+  aliases — same slug-join rule as roadmaps). Re-import is idempotent.
+- In-repo roadmaps never need importing: they load as tracks automatically.
+
+## model build
+Compile the model (registry + tracks + learning state) and print a summary:
+concepts/edges/tracks, per-state counts (mastered / learning / weak / stale /
+missing — thresholds in config.yaml `model.state`), coverage vs the knowledge
+base, and the most-converged concepts (touched by multiple tracks).
+
+## readiness
+Explainable per-concept readiness for any track or goal. `brain readiness example-cert`
+- One line per concept in track order: state, level, and a "because" that
+  self-explains (evidence level, staleness age, or `first: <prereq>` blockers).
+- Exit codes: 0 ready (everything mastered/learning), 1 not ready, 2 unknown track.
+
+## context
+One-screen YAML learning-state export for pasting into any AI assistant.
+`brain context [--track X] [--goal Y]`
+- Active tracks with readiness + goal deadlines/priorities, per-state concept
+  lists, top gaps with reasons (round-robin across tracks, highest-priority
+  goal first). Topic names and states only — no note contents.
+
 ## assess
 The only setter of ai_confidence. Requires receipts:
 ```

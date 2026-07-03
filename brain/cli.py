@@ -198,6 +198,86 @@ def cmd_log_exposure(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_model_import(args: argparse.Namespace) -> int:
+    from .model.imports import import_resource
+
+    try:
+        result = import_resource(Path(args.src), adapter=args.adapter,
+                                 slug=args.track, dry_run=args.dry_run)
+    except ValueError as e:
+        print(e)
+        return 1
+
+    t = result.track
+    print(f"track: {t.track} ({t.title}) — {len(t.units)} units, "
+          f"{len(t.edges)} edges, adapter {t.adapter}")
+    for c in result.new_concepts:
+        print(f"  new concept: {c.id} ({c.name})")
+    for n in result.notes:
+        print(f"  note: {n}")
+    if result.written:
+        print(f"wrote {result.track_path}"
+              + (f" and added {len(result.new_concepts)} concept(s) to the registry"
+                 if result.new_concepts else ""))
+    else:
+        print("\n--- dry run: would write "
+              f"{result.track_path} ---\n{result.track_yaml}", end="")
+    return 0
+
+
+def cmd_model_build(args: argparse.Namespace) -> int:
+    from collections import Counter
+
+    from .model.compile import STATES, compile_model
+
+    model = compile_model()
+    n_roadmap = sum(1 for t in model.tracks if t.adapter == "roadmap")
+    print(f"model: {len(model.concepts)} concepts, {len(model.edges)} edges, "
+          f"{len(model.tracks)} track(s) ({n_roadmap} from roadmaps, "
+          f"{len(model.tracks) - n_roadmap} imported)")
+    counts = Counter(c.state for c in model.concepts.values())
+    print("state: " + ", ".join(f"{counts.get(s, 0)} {s}" for s in STATES))
+    evidenced = sum(1 for c in model.concepts.values() if c.level > 0)
+    print(f"coverage: {evidenced}/{len(model.concepts)} concepts evidenced; "
+          f"{model.kb_topics_matched}/{model.kb_topics_total} note topics in the model")
+    converged = [c for c in model.concepts.values() if c.convergence > 1]
+    if converged:
+        top = sorted(converged, key=lambda c: -c.convergence)[:5]
+        print("convergence: " + ", ".join(f"{c.id} x{c.convergence}" for c in top))
+    return 0
+
+
+def cmd_readiness(args: argparse.Namespace) -> int:
+    from .model.readiness import readiness
+
+    try:
+        report = readiness(args.track)
+    except ValueError as e:
+        print(e)
+        return 2
+
+    counts = report.counts()
+    on_track = sum(counts.get(s, 0) for s in ("mastered", "learning"))
+    print(f"readiness: {report.track} ({report.title}) — "
+          f"{on_track}/{len(report.lines)} concepts on track"
+          + ("" if report.ready else " — NOT ready: "
+             + ", ".join(f"{counts[s]} {s}" for s in ("missing", "weak", "stale") if counts.get(s))))
+    for line in report.lines:
+        print(f"  {line.state:<8} {line.level:>3g}  {line.concept:<24} {line.because}")
+    return 0 if report.ready else 1
+
+
+def cmd_context(args: argparse.Namespace) -> int:
+    from .model.context import render_context
+
+    try:
+        print(render_context(track=args.track, goal=args.goal), end="")
+    except ValueError as e:
+        print(e)
+        return 1
+    return 0
+
+
 def cmd_graph(args: argparse.Namespace) -> int:
     from .graph import export
 
@@ -313,6 +393,31 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("log-exposure", help="record a review event on a topic")
     p.add_argument("topic")
     p.set_defaults(func=cmd_log_exposure)
+
+    p = sub.add_parser("model", help="knowledge model: import learning resources as tracks")
+    msub = p.add_subparsers(dest="model_command", required=True)
+    mp = msub.add_parser("import", help="import a syllabus/outline/roadmap file as a track")
+    mp.add_argument("src", help="markdown outline or roadmap-format YAML")
+    mp.add_argument("--adapter", choices=["outline", "roadmap"],
+                    help="default: by extension (.md outline, .yaml roadmap)")
+    mp.add_argument("--track", help="track slug (default: derived from the title)")
+    mp.add_argument("--dry-run", action="store_true",
+                    help="print the would-be track, write nothing")
+    mp.set_defaults(func=cmd_model_import)
+    mp = msub.add_parser("build", help="compile the model and print a summary")
+    mp.set_defaults(func=cmd_model_build)
+
+    p = sub.add_parser("readiness",
+                       help="explainable per-concept readiness for a track or goal "
+                            "(exit 0 ready, 1 not ready, 2 unknown track)")
+    p.add_argument("track", help="track slug or goal id (e.g. gcp-cdl)")
+    p.set_defaults(func=cmd_readiness)
+
+    p = sub.add_parser("context",
+                       help="compact learning-state YAML for pasting into any AI assistant")
+    p.add_argument("--track", help="limit to one track slug")
+    p.add_argument("--goal", help="limit to one goal id")
+    p.set_defaults(func=cmd_context)
 
     p = sub.add_parser("graph", help="export ui/graph.json + ui/graph.data.js")
     p.set_defaults(func=cmd_graph)

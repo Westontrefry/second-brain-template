@@ -10,11 +10,16 @@ then do the mechanical work yourself.
 - `knowledge/**/*.md` — THE knowledge base. Markdown + YAML frontmatter is the
   source of truth. Everything else is derived and rebuildable.
 - `brain/` — Python CLI: `validate | add | import | ingest | search | gaps |
-  assess | log-exposure | graph | ui | rebuild | status`. Run as
+  assess | log-exposure | graph | ui | rebuild | status | model import |
+  model build | readiness | context`. Run as
   `.venv/bin/python -m brain <cmd>`. See `docs/cli.md`.
 - `goals/goals.yaml` — the user's goals. `goals/roadmaps/<goal-id>.yaml` — per-
   goal skill checklists with `required_level` (vs `rubrics/depth.yaml`) and
   `aliases`, which join note topics to roadmap topics.
+- `model/` — the knowledge model (KME): `concepts.yaml` is the canonical
+  concept registry (ids + aliases; an alias joins the user's note vocabulary
+  to a concept — add aliases here, never rename their topics), and
+  `tracks/*.yaml` are imported learning resources (`brain model import`).
 - `.claude/skills/` — the AI layer: /log, /ingest, /query, /quiz, /review,
   /path, /interview-pack, /debrief. Read each SKILL.md before using it.
 - `docs/architecture.md` and `docs/glossary.md` — read both before editing code.

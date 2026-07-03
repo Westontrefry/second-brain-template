@@ -1,0 +1,20 @@
+# KME canonical concept registry (COMMITTED SOURCE).
+# One entry per concept: canonical slug id, display name, and the alias
+# vocabulary that joins it to note topics (slugify match, same rule as
+# roadmap aliases). An alias may belong to only one concept.
+# Grows via `brain model import` and by hand — where your note vocabulary
+# doesn't match, add an alias here; never rename note topics.
+concepts:
+- id: advanced-topic
+  name: An advanced topic
+  aliases: []
+- id: applied-topic
+  name: An applied topic building on fundamentals
+  aliases:
+  - hands-on topic
+  - practical topic
+- id: fundamentals
+  name: Core fundamentals
+  aliases:
+  - basics
+  - core concepts

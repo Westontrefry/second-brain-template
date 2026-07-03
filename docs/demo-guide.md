@@ -162,6 +162,48 @@ an overlay on the map.
 ```
 Then pick the pathway from the **Pathway** dropdown in the map.
 
+### 11. Teach it a course or study plan
+**What it is:** hand it a syllabus (or any outline — a cert exam guide, a
+book's table of contents, a study plan) and it learns the *structure*: which
+topics the course covers, in what order, and what builds on what. That
+structure joins your knowledge model, so the system can later tell you how
+ready you are for week 5 before you get there.
+
+**How:** save the syllabus as a markdown file (headings for the weeks,
+bullet points for the topics), then:
+```
+python -m brain model import ~/Downloads/course-syllabus.md
+```
+Add `--dry-run` to preview what it would learn without saving anything. Topics
+it already knows get matched up; genuinely new ones get added to its
+vocabulary automatically.
+
+Curious how the whole model is doing? `python -m brain model build` prints a
+one-glance health check: how many concepts it tracks, how many you have real
+evidence for, and what's mastered vs still fading.
+
+Imported courses also show up on the knowledge map — pick one from the
+**Goal** dropdown like any goal and you get the same treatment: suggested
+next actions, dashed circles for the parts you haven't touched, and each
+topic's panel notes how many courses/goals converge on it ("in 2 tracks" =
+learn it once, it pays off twice).
+
+### 12. Check if you're ready (and take your brain anywhere)
+**What it is:** two commands that answer the two questions everything else
+builds toward. *"Am I ready?"* — pick any course or goal and get a
+line-by-line verdict where every line explains itself (stale since when,
+missing what, do what first). And *"can another AI help me?"* — a one-screen
+summary of your entire learning state, made to be pasted into any assistant
+(ChatGPT, a fresh Claude chat, whatever) so it instantly knows what you know.
+
+**How:**
+```
+python -m brain readiness <goal-id>
+python -m brain context
+```
+The context export fits on one screen and contains no note contents — just
+topic names and states — so it's safe to paste around.
+
 ---
 
 ## Common questions

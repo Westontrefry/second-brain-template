@@ -20,7 +20,7 @@ from pathlib import Path
 from .config import knowledge_dir, load_config, root
 from .gaps import load_goals, load_roadmap
 from .schema import parse_note, validate_note
-from .util import slugify
+from .util import slug_keys, slugify
 from .weights import collect
 
 WIKILINK_RE = re.compile(r"\[\[([a-zA-Z0-9-]+)\]\]")
@@ -106,7 +106,7 @@ def build(today: dt.date | None = None) -> dict:
             continue
         resolved: dict[str, str] = goal_resolved.setdefault(gid, {})
         for entry in roadmap["topics"]:
-            keys = {slugify(entry["id"])} | {slugify(a) for a in entry.get("aliases", [])}
+            keys = slug_keys(entry["id"], entry.get("aliases", []))
             matches = [slug_to_topic[k] for k in keys if k in slug_to_topic]
             if matches:
                 rep = sorted(
@@ -154,11 +154,86 @@ def build(today: dt.date | None = None) -> dict:
             for gp in analyze(goal_id=gid, today=today)[:8]
         ]
 
+    # KME track layer: imported tracks (model/tracks/*.yaml) join the map
+    # exactly like roadmap layers — same dropdown, gaps overlay, drill-down
+    # requirements and suggestions panel; no second UI. Roadmap-derived
+    # tracks are skipped (the goal layer above already renders them).
+    # Convergence (tracks touching a concept) lands on every matched node.
+    from .model import registry as reg_mod
+    from .model.compile import compile_model, thresholds
+    from .model.readiness import READY_STATES, readiness
+
+    TRACK_ACTIONS = {"missing": "no evidence — start here",
+                     "weak": "weak — study and practice", "stale": "stale — refresh"}
+    model = compile_model(today)
+    aliases = {c.id: c.aliases for c in reg_mod.load().concepts}
+    required = thresholds()["learning_level"]
+    track_entries = []
+
+    def concept_node(cid: str) -> str:
+        """Representative node for a concept, roadmap-layer rules: alias match
+        into the topic map, otherwise a 'missing' node keyed by concept id."""
+        keys = slug_keys(cid, aliases.get(cid, []))
+        matches = [slug_to_topic[k] for k in keys if k in slug_to_topic]
+        if matches:
+            return sorted(matches, key=lambda t: (slugify(t) == cid,
+                                                  nodes[t]["weight"], t))[-1]
+        if cid not in nodes:
+            nodes[cid] = {
+                "id": cid, "label": model.concepts[cid].name, "type": "missing",
+                "weight": 0.0, "evidenced": 0.0, "lastReviewed": "",
+                "selfConfidence": 0, "aiConfidence": None, "goals": set(),
+                "domains": Counter(), "sources": Counter(), "notes": [],
+                "requirements": [],
+            }
+        return cid
+
+    for track in model.tracks:
+        if track.adapter == "roadmap":
+            continue
+        track_entries.append({"id": track.track, "title": f"{track.title} (track)",
+                              "priority": 0})
+        resolved = {}
+        for ref in track.concept_ids():
+            cid = model.resolve_ref(ref)
+            rep = concept_node(cid)
+            resolved[cid] = rep
+            node = nodes[rep]
+            node["goals"].add(track.track)
+            node["requirements"].append({
+                "goal": track.track, "topicId": cid,
+                "name": model.concepts[cid].name, "required": required,
+                "gap": max(required - node["evidenced"], 0),
+            })
+        for e in track.edges:
+            src, dst = model.resolve_ref(e.source), model.resolve_ref(e.target)
+            if e.kind == "prereq" and src in resolved and dst in resolved:
+                add_edge(resolved[src], resolved[dst], "prereq", 1.5 * e.confidence)
+        gaps_lines = [l for l in readiness(track.track, model=model).lines
+                      if l.state not in READY_STATES]
+        suggestions[track.track] = [
+            {"nodeId": resolved.get(l.concept, l.concept), "name": l.name,
+             "action": TRACK_ACTIONS.get(l.state, l.state),
+             "score": len(gaps_lines) - i, "blockedBy": l.blocked_by}
+            for i, l in enumerate(gaps_lines[:8])
+        ]
+
+    for cid, cs in model.concepts.items():
+        if cs.convergence == 0:
+            continue
+        for key in slug_keys(cid, aliases.get(cid, [])):
+            topic = slug_to_topic.get(key)
+            if topic in nodes:
+                nodes[topic]["convergence"] = max(nodes[topic].get("convergence", 0),
+                                                  cs.convergence)
+        if cid in nodes:  # missing nodes are keyed by concept id
+            nodes[cid]["convergence"] = cs.convergence
+
     return {
         "suggestions": suggestions,
         "generated": today.isoformat(),
         "goals": [{"id": g["id"], "title": g["title"], "priority": g["priority"]}
-                  for g in goals.values()],
+                  for g in goals.values()] + track_entries,
         "nodes": [
             {**n, "goals": sorted(n["goals"]),
              "domain": n["domains"].most_common(1)[0][0] if n["domains"] else None,
