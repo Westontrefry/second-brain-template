@@ -315,7 +315,7 @@ function drill(id, push) {
     `<tr><td>${r.name} <span style="color:var(--muted)">(${r.goal})</span></td>
      <td>${n.evidenced}/${r.required}${r.gap > 0 ? ' ⚠' : ' ✓'}</td></tr>`).join('');
   const noteRows = (n.notes || []).map(nt =>
-    `<div><span class="noteLink" data-view="${nt.id}">${nt.id.replace(/^\d{4}-\d{2}-\d{2}-/, '')}</span>
+    `<div><span class="noteLink" data-view="${nt.id}">${noteLabel(nt.id)}</span>
      <span style="color:var(--muted)">conf ${nt.confidence} · ${nt.lastReviewed}</span></div>`).join('');
   const nbrChips = [...neighborSet(id)].filter(x => x !== id).map(x =>
     `<span class="chip" data-drill="${x}">${x}</span>`).join('') || '<span class="sub">none</span>';
@@ -406,11 +406,20 @@ function renderMarkdown(src) {
   return html;
 }
 
+// Display name for a note id: strip the date prefix, dashes -> spaces,
+// title-case each word. Display only — the id stays the click/link key.
+function noteLabel(id) {
+  return id.replace(/^\d{4}-\d{2}-\d{2}-/, '')
+    .split('-')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
 function viewNote(id, meta) {
   const overlay = document.getElementById('noteOverlay');
   const body = (window.NOTES || {})[id];
   document.getElementById('noteHead').innerHTML = `
-    <h2>${id.replace(/^\d{4}-\d{2}-\d{2}-/, '')}</h2>
+    <h2>${noteLabel(id)}</h2>
     <span class="sub">${meta ? `conf ${meta.confidence} · ${meta.lastReviewed}` : ''}</span>
     <button id="noteClose" title="close">✕</button>`;
   const nb = document.getElementById('noteBody');
