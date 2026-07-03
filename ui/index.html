@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Second Brain — knowledge graph</title>
+<style>
+  :root { --strong:#1D9E75; --weak:#EF9F27; --hot:#D85A30; --dim-op:.12;
+          --ink:#2c2c2a; --muted:#77766f; --line:#d9d7ce; --bg:#faf9f5; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 -apple-system, "Segoe UI", sans-serif;
+         color:var(--ink); background:var(--bg); overflow:hidden; }
+  header { display:flex; gap:14px; align-items:center; padding:10px 16px;
+           border-bottom:1px solid var(--line); background:#fff; flex-wrap:wrap; }
+  header h1 { font-size:15px; font-weight:600; margin:0 8px 0 0; }
+  header label { font-size:12.5px; color:var(--muted); display:flex; gap:5px; align-items:center; }
+  select { font:inherit; font-size:12.5px; padding:2px 4px; }
+  #legend { margin-left:auto; display:flex; gap:12px; font-size:12px; color:var(--muted); }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:4px; vertical-align:-1px; }
+  #stage { position:relative; width:100vw; height:calc(100vh - 45px); }
+  svg { width:100%; height:100%; display:block; cursor:grab; }
+  .edge { stroke:#9a988f; stroke-opacity:.45; }
+  .edge.wikilink { stroke-dasharray:2 3; }
+  .edge.prereq { stroke-opacity:.6; }
+  .node circle.missing { fill:none; stroke:#9a988f; stroke-width:1.5; stroke-dasharray:4 4; }
+  .node text { font-size:11px; fill:var(--muted); pointer-events:none; }
+  .node { cursor:pointer; }
+  .dim { opacity:var(--dim-op); }
+  .hot circle { stroke:var(--hot) !important; stroke-width:2.5px; stroke-dasharray:none; }
+  .hot.node text { fill:var(--hot); }
+  .edge.hot { stroke:var(--hot); stroke-opacity:.9; }
+  .diverge circle { stroke:#7F77DD; stroke-width:3px; }
+  .focusring circle { stroke:#378ADD; stroke-width:2.5px; }
+  #route { fill:none; stroke:var(--hot); stroke-width:3; stroke-opacity:.7; stroke-dasharray:8 5; }
+  #panel { position:absolute; top:12px; right:12px; width:320px; max-height:calc(100% - 24px);
+           overflow-y:auto; background:#fff; border:1px solid var(--line); border-radius:10px;
+           padding:14px 16px; box-shadow:0 4px 18px rgba(0,0,0,.08); display:none; }
+  #panel h2 { font-size:16px; margin:0 0 2px; }
+  #panel .sub { color:var(--muted); font-size:12px; margin-bottom:10px; }
+  #panel h3 { font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+              color:var(--muted); margin:14px 0 4px; }
+  #panel table { width:100%; font-size:12.5px; border-collapse:collapse; }
+  #panel td { padding:2px 0; } #panel td:last-child { text-align:right; }
+  #panel a { color:#185FA5; text-decoration:none; font-size:12.5px; }
+  #panel .chip { display:inline-block; font-size:11.5px; padding:2px 8px; margin:2px 4px 2px 0;
+                 border:1px solid var(--line); border-radius:20px; cursor:pointer; background:#fff; }
+  #panel .chip:hover { border-color:var(--ink); }
+  #crumbs { font-size:11.5px; color:var(--muted); margin-bottom:6px; }
+  #crumbs span { cursor:pointer; color:#185FA5; }
+  #closeBtn { float:right; border:none; background:none; font-size:16px; cursor:pointer; color:var(--muted); }
+  .bar { height:6px; border-radius:3px; background:#eee; overflow:hidden; margin-top:2px; }
+  .bar i { display:block; height:100%; }
+  #empty { padding:40px; font-size:15px; color:var(--muted); }
+  #suggest { position:absolute; top:12px; left:12px; width:290px; max-height:calc(100% - 24px);
+             overflow-y:auto; background:#fff; border:1px solid var(--line); border-radius:10px;
+             padding:12px 14px; box-shadow:0 4px 18px rgba(0,0,0,.08); display:none; }
+  #suggest h2 { font-size:13px; margin:0 0 8px; }
+  .sugItem { padding:7px 8px; border:1px solid var(--line); border-radius:8px; margin-bottom:6px;
+             font-size:12.5px; cursor:pointer; background:#fff; }
+  .sugItem:hover { border-color:var(--ink); }
+  .sugItem .act { color:var(--muted); font-size:11.5px; }
+  .sugItem .score { float:right; color:var(--hot); font-weight:600; font-size:11.5px; }
+  #refPanel { position:absolute; top:12px; right:12px; width:420px; max-height:calc(100% - 24px);
+              overflow-y:auto; background:#fff; border:1px solid var(--line); border-radius:10px;
+              padding:14px 16px; box-shadow:0 4px 18px rgba(0,0,0,.08); display:none; }
+  #refPanel h2 { font-size:14px; margin:12px 0 6px; }
+  #refPanel input { width:100%; font:inherit; font-size:13px; padding:5px 8px;
+                    border:1px solid var(--line); border-radius:6px; margin-bottom:4px; }
+  .refItem { padding:6px 0; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .refItem:last-child { border-bottom:none; }
+  .refItem code { background:#f4f2ea; padding:1px 6px; border-radius:4px; font-size:12px; }
+  .refItem .desc { color:var(--muted); margin-top:2px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Second Brain</h1>
+  <label>Goal
+    <select id="goalSel"><option value="">all</option></select>
+  </label>
+  <label>Pathway
+    <select id="pathSel"><option value="">none</option></select>
+  </label>
+  <label><input type="checkbox" id="gapToggle"> show gaps</label>
+  <label><input type="checkbox" id="divToggle"> divergence</label>
+  <button id="refBtn" style="font:inherit; font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer;">? reference</button>
+  <div id="legend">
+    <span><span class="dot" style="background:var(--strong)"></span>strong (≥3)</span>
+    <span><span class="dot" style="background:var(--weak)"></span>weak</span>
+    <span><span class="dot" style="border:1.5px dashed #9a988f"></span>not yet covered</span>
+  </div>
+</header>
+<div id="stage">
+  <svg id="graph"></svg>
+  <aside id="suggest"></aside>
+  <aside id="panel"></aside>
+  <aside id="refPanel"></aside>
+</div>
+<script src="d3.v7.min.js"></script>
+<script src="graph.data.js"></script>
+<script>
+if (!window.GRAPH) {
+  document.getElementById('stage').innerHTML =
+    '<div id="empty">No graph data. Run: <code>python -m brain ui</code></div>';
+} else {
+main();
+}
+function main() {
+const G = window.GRAPH, PATHS = window.PATHS || [];
+const svg = d3.select('#graph'), stage = document.getElementById('stage');
+const W = stage.clientWidth, H = stage.clientHeight;
+const g = svg.append('g');
+const routeEl = g.append('path').attr('id', 'route');
+svg.call(d3.zoom().scaleExtent([0.25, 4]).on('zoom', e => g.attr('transform', e.transform)));
+
+const goalSel = document.getElementById('goalSel');
+G.goals.forEach(gl => goalSel.add(new Option(gl.title, gl.id)));
+const pathSel = document.getElementById('pathSel');
+PATHS.forEach((p, i) => pathSel.add(new Option(p.title || p.slug, i)));
+
+let nodes = [], links = [], sim = null, focusId = null, crumbs = [];
+
+function tier(n) {
+  if (n.type === 'missing') return 'missing';
+  return n.evidenced >= 3 ? 'strong' : 'weak';
+}
+function hasGap(n) {
+  return n.type === 'missing' || (n.requirements || []).some(r => r.gap > 0);
+}
+function radius(n) { return n.type === 'missing' ? 9 : Math.min(8 + Math.sqrt(n.weight) * 4, 28); }
+function color(n) { return tier(n) === 'strong' ? 'var(--strong)' : 'var(--weak)'; }
+
+function visibleData() {
+  const goal = goalSel.value;
+  const ns = G.nodes.filter(n => !goal || (n.goals || []).includes(goal));
+  const ids = new Set(ns.map(n => n.id));
+  const ls = G.edges.filter(e => ids.has(e.source.id || e.source) && ids.has(e.target.id || e.target));
+  return [ns.map(n => Object.assign({}, n)), ls.map(l => Object.assign({}, l))];
+}
+
+function render() {
+  [nodes, links] = visibleData();
+  if (sim) sim.stop();
+  g.selectAll('.edge,.node').remove();
+
+  const edge = g.selectAll('.edge').data(links).join('line')
+    .attr('class', d => 'edge ' + d.kind)
+    .attr('stroke-width', d => Math.min(1 + d.strength, 5));
+
+  const node = g.selectAll('.node').data(nodes).join('g').attr('class', 'node')
+    .call(d3.drag()
+      .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+      .on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = d.fy = null; }))
+    .on('click', (e, d) => { e.stopPropagation(); drill(d.id, true); });
+
+  node.append('circle')
+    .attr('r', radius)
+    .attr('class', d => tier(d) === 'missing' ? 'missing' : '')
+    .attr('fill', d => tier(d) === 'missing' ? 'none' : color(d))
+    .attr('data-id', d => d.id);
+  node.append('text').attr('text-anchor', 'middle')
+    .attr('dy', d => radius(d) + 13).text(d => d.label);
+
+  sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id)
+      .distance(d => d.kind === 'prereq' ? 70 : 55).strength(d => Math.min(.2 + d.strength * .12, .9)))
+    .force('charge', d3.forceManyBody().strength(-220))
+    .force('center', d3.forceCenter(W / 2, H / 2))
+    .force('collide', d3.forceCollide(d => radius(d) + 14))
+    .on('tick', () => {
+      edge.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+      node.attr('transform', d => `translate(${d.x},${d.y})`);
+      drawRoute();
+    });
+  applyModes();
+}
+
+function applyModes() {
+  const gap = document.getElementById('gapToggle').checked;
+  const div = document.getElementById('divToggle').checked;
+  const nbrs = focusId ? neighborSet(focusId) : null;
+  g.selectAll('.node')
+    .classed('hot', d => gap && hasGap(d))
+    .classed('dim', d => (gap && !hasGap(d)) || (div && !diverges(d)) || (nbrs && !nbrs.has(d.id)))
+    .classed('diverge', d => div && diverges(d))
+    .classed('focusring', d => d.id === focusId);
+  g.selectAll('.edge')
+    .classed('hot', d => gap && d.kind === 'prereq' && (hasGap(d.source) || hasGap(d.target)))
+    .classed('dim', d => {
+      if (nbrs && !(d.source.id === focusId || d.target.id === focusId)) return true;
+      if (gap && !(hasGap(d.source) || hasGap(d.target))) return true;
+      return false;
+    });
+}
+function diverges(n) {
+  return n.aiConfidence !== null && n.aiConfidence !== undefined &&
+         Math.abs(n.selfConfidence - n.aiConfidence) >= 1;
+}
+function neighborSet(id) {
+  const s = new Set([id]);
+  links.forEach(l => {
+    if (l.source.id === id) s.add(l.target.id);
+    if (l.target.id === id) s.add(l.source.id);
+  });
+  return s;
+}
+
+function drill(id, push) {
+  focusId = id;
+  if (push) crumbs.push(id);
+  applyModes();
+  const n = nodes.find(x => x.id === id) || G.nodes.find(x => x.id === id);
+  const panel = document.getElementById('panel');
+  const reqRows = (n.requirements || []).map(r =>
+    `<tr><td>${r.name} <span style="color:var(--muted)">(${r.goal})</span></td>
+     <td>${n.evidenced}/${r.required}${r.gap > 0 ? ' ⚠' : ' ✓'}</td></tr>`).join('');
+  const noteRows = (n.notes || []).map(nt =>
+    `<div><a href="file://${nt.path}">${nt.id}</a>
+     <span style="color:var(--muted)">conf ${nt.confidence} · ${nt.lastReviewed}</span></div>`).join('');
+  const nbrChips = [...neighborSet(id)].filter(x => x !== id).map(x =>
+    `<span class="chip" data-drill="${x}">${x}</span>`).join('') || '<span class="sub">none</span>';
+  const crumbHtml = crumbs.map((c, i) =>
+    `<span data-crumb="${i}">${c}</span>`).join(' › ');
+  const pct = Math.min(n.evidenced / 5 * 100, 100);
+  panel.innerHTML = `
+    <button id="closeBtn" title="close">✕</button>
+    <div id="crumbs">${crumbHtml}</div>
+    <h2>${n.label}</h2>
+    <div class="sub">${n.type === 'missing' ? 'not yet covered' : (n.domain || '')} · weight ${n.weight}</div>
+    <h3>Evidenced level</h3>
+    <div>${n.evidenced} / 5</div>
+    <div class="bar"><i style="width:${pct}%;background:${n.evidenced >= 3 ? 'var(--strong)' : 'var(--weak)'}"></i></div>
+    <h3>Confidence</h3>
+    <table><tr><td>self-assessed</td><td>${n.selfConfidence || '—'}</td></tr>
+    <tr><td>ai (evidence-based)</td><td>${n.aiConfidence ?? 'unassessed'}</td></tr></table>
+    ${reqRows ? '<h3>Required by goals</h3><table>' + reqRows + '</table>' : ''}
+    ${Object.keys(n.sources || {}).length ? '<h3>Evidence mix</h3><table>' +
+      Object.entries(n.sources).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('') + '</table>' : ''}
+    ${noteRows ? '<h3>Notes (' + n.notes.length + ')</h3>' + noteRows : ''}
+    <h3>Connected topics — drill in</h3>${nbrChips}`;
+  panel.style.display = 'block';
+  panel.querySelectorAll('[data-drill]').forEach(el =>
+    el.addEventListener('click', () => drill(el.dataset.drill, true)));
+  panel.querySelectorAll('[data-crumb]').forEach(el =>
+    el.addEventListener('click', () => { crumbs = crumbs.slice(0, +el.dataset.crumb + 1); drill(crumbs.at(-1), false); }));
+  panel.querySelector('#closeBtn').addEventListener('click', clearFocus);
+}
+function clearFocus() {
+  focusId = null; crumbs = [];
+  document.getElementById('panel').style.display = 'none';
+  applyModes();
+}
+
+let route = null;
+function drawRoute() {
+  if (!route) { routeEl.attr('d', null); return; }
+  const pts = route.nodes.map(r => nodes.find(n => n.id === r.id)).filter(Boolean);
+  if (pts.length < 2) { routeEl.attr('d', null); return; }
+  routeEl.attr('d', d3.line().curve(d3.curveCatmullRom)(pts.map(p => [p.x, p.y])));
+}
+
+function renderSuggest() {
+  const el = document.getElementById('suggest');
+  const items = [];
+  if (route && route.suggestions) {
+    items.push(`<h2>Pathway: ${route.title || route.slug}</h2>`);
+    route.suggestions.forEach(s => {
+      const text = typeof s === 'string' ? s : s.text;
+      const nid = typeof s === 'string' ? null : s.nodeId;
+      items.push(`<div class="sugItem" ${nid ? `data-node="${nid}"` : ''}>${text}</div>`);
+    });
+  } else if (goalSel.value && (G.suggestions || {})[goalSel.value]) {
+    items.push('<h2>Suggested next actions</h2>');
+    G.suggestions[goalSel.value].forEach(s => {
+      items.push(`<div class="sugItem" data-node="${s.nodeId}">
+        <span class="score">${s.score}</span><strong>${s.name}</strong>
+        <div class="act">${s.action}${s.blockedBy.length ? ' · first: ' + s.blockedBy.join(', ') : ''}</div></div>`);
+    });
+  }
+  el.innerHTML = items.join('');
+  el.style.display = items.length ? 'block' : 'none';
+  el.querySelectorAll('[data-node]').forEach(d =>
+    d.addEventListener('click', () => drill(d.dataset.node, true)));
+}
+
+function buildReference() {
+  const R = window.REFERENCE || { skills: [], cli: [] };
+  const el = document.getElementById('refPanel');
+  const item = (name, desc) =>
+    `<div class="refItem"><code>${name}</code><div class="desc">${desc}</div></div>`;
+  el.innerHTML = `
+    <button id="refClose" style="float:right;border:none;background:none;font-size:16px;cursor:pointer;color:var(--muted)">✕</button>
+    <input id="refFilter" placeholder="filter commands…">
+    <h2>Skills — say these in a Claude Code session here</h2>
+    <div>${R.skills.map(s => item('/' + s.name, s.description)).join('')}</div>
+    <h2>CLI — python -m brain &lt;command&gt;</h2>
+    <div>${R.cli.map(c => item('brain ' + c.name, c.description)).join('')}</div>`;
+  el.querySelector('#refClose').addEventListener('click', () => el.style.display = 'none');
+  el.querySelector('#refFilter').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    el.querySelectorAll('.refItem').forEach(it =>
+      it.style.display = it.textContent.toLowerCase().includes(q) ? '' : 'none');
+  });
+}
+buildReference();
+document.getElementById('refBtn').addEventListener('click', () => {
+  const el = document.getElementById('refPanel');
+  const show = el.style.display !== 'block';
+  el.style.display = show ? 'block' : 'none';
+  if (show) { document.getElementById('panel').style.display = 'none'; }
+});
+
+svg.on('click', clearFocus);
+goalSel.addEventListener('change', () => { clearFocus(); render(); renderSuggest(); });
+pathSel.addEventListener('change', () => {
+  route = pathSel.value === '' ? null : PATHS[+pathSel.value];
+  if (route) {
+    const ids = new Set(route.nodes.map(r => r.id));
+    g.selectAll('.node').classed('dim', d => !ids.has(d.id));
+  } else { applyModes(); }
+  drawRoute();
+  renderSuggest();
+});
+document.getElementById('gapToggle').addEventListener('change', applyModes);
+document.getElementById('divToggle').addEventListener('change', applyModes);
+render();
+}
+</script>
+</body>
+</html>

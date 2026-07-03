@@ -1,0 +1,45 @@
+# the user's goals. Each goal's id is referenced by notes (frontmatter `goals:`) and
+# by roadmap files in goals/roadmaps/<id>.yaml. Priority: 1 (low) to 5 (highest).
+# Deadlines are initial estimates — flagged for the user's review in PROGRESS.md.
+
+goals:
+  - id: uf-cs-degree
+    title: UF CS degree — final semesters
+    priority: 5
+    deadline: 2027-05-01
+    description: Complete remaining coursework with strong grades.
+
+  - id: dsa-interviews
+    title: DSA / SWE interview prep
+    priority: 5
+    deadline: 2027-03-01
+    description: >
+      Fluency under pressure (rubric level 4) on the interview canon: arrays, strings,
+      hash maps, two pointers, trees, graphs, heaps, dynamic programming, plus
+      system design fundamentals for new-grad loops.
+
+  - id: gcp-cdl
+    title: Google Cloud Digital Leader certification
+    priority: 3
+    deadline: 2026-10-01
+    description: Foundational cert; stepping stone to ACE.
+
+  - id: gcp-ace
+    title: Google Associate Cloud Engineer certification
+    priority: 4
+    deadline: 2027-01-15
+    description: Hands-on cert covering IAM, compute, networking, storage, GKE, ops.
+
+  - id: job-readiness
+    title: New-grad SWE job readiness
+    priority: 5
+    deadline: 2027-05-01
+    description: >
+      Competitive candidacy: resume, portfolio, behavioral prep, applications,
+      and the market signal that comes from shipped projects and certs.
+
+  - id: ebapp
+    title: EB.app development
+    priority: 4
+    deadline: null
+    description: Personal software project; primary source of application-level evidence.

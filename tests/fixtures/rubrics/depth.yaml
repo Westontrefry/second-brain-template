@@ -1,0 +1,41 @@
+# Universal knowledge-depth rubric. Applied identically to every topic in every domain.
+# The AI's only judgment call is classifying a piece of evidence against these levels,
+# quoting the line that proves it. All scoring/aggregation/decay is deterministic code.
+# No evidence -> level 0 ("unassessed"), never a guess.
+
+levels:
+  - level: 0
+    name: no evidence
+    indicators:
+      - Topic appears in a roadmap but in no notes, quiz results, or project work.
+
+  - level: 1
+    name: exposure
+    indicators:
+      - Concept is mentioned or defined in notes, but only in borrowed/definitional terms.
+      - Can recognize the term; cannot yet explain mechanism or purpose unprompted.
+
+  - level: 2
+    name: comprehension
+    indicators:
+      - Explained in the user's own words, including WHY it exists, not just what it is.
+      - Can contrast it with an alternative (e.g. B-tree vs hash index) at a basic level.
+
+  - level: 3
+    name: application
+    indicators:
+      - Used in real work - project code, configs, solved practice problems.
+      - Note or commit shows a concrete decision made using the concept.
+
+  - level: 4
+    name: fluency
+    indicators:
+      - Applied under pressure or variation - timed problems, debugging, novel contexts.
+      - Chose between alternatives and justified the tradeoff.
+      - Quiz answers at application level are correct without reference material.
+
+  - level: 5
+    name: mastery
+    indicators:
+      - Taught or documented it for others; designed systems with it.
+      - Handles edge cases and failure modes unprompted.

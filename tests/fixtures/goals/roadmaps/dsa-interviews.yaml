@@ -1,0 +1,94 @@
+# Roadmap: DSA / SWE interview prep (DRAFT — the user review)
+# required_level 4 = fluency under pressure (timed, no references) per rubrics/depth.yaml.
+
+goal: dsa-interviews
+topics:
+  - id: big-o
+    name: Complexity analysis
+    required_level: 4
+    prereqs: []
+    aliases: [complexity, time complexity, asymptotic analysis]
+
+  - id: arrays-strings
+    name: Arrays and strings
+    required_level: 4
+    prereqs: [big-o]
+    aliases: [arrays, strings]
+
+  - id: hash-maps
+    name: Hash maps and sets
+    required_level: 4
+    prereqs: [arrays-strings]
+    aliases: [hashing, hash tables, hash functions, dictionaries, maps, sets]
+
+  - id: two-pointers
+    name: Two pointers and sliding window
+    required_level: 4
+    prereqs: [arrays-strings]
+    aliases: [sliding window]
+
+  - id: binary-search
+    name: Binary search and variants
+    required_level: 4
+    prereqs: [arrays-strings]
+    aliases: []
+
+  - id: linked-lists
+    name: Linked lists
+    required_level: 4
+    prereqs: [big-o]
+    aliases: []
+
+  - id: stacks-queues
+    name: Stacks and queues
+    required_level: 3
+    prereqs: [arrays-strings]
+    aliases: [stack, queue, monotonic stack, stacks, queues]
+
+  - id: sorting
+    name: Sorting algorithms and applications
+    required_level: 3
+    prereqs: [big-o]
+    aliases: [sorting-searching, quicksort, mergesort, bubble sort, insertion sort, selection sort]
+
+  - id: recursion-backtracking
+    name: Recursion and backtracking
+    required_level: 4
+    prereqs: [big-o]
+    aliases: [recursion, backtracking]
+
+  - id: trees
+    name: Trees and BSTs
+    required_level: 4
+    prereqs: [recursion-backtracking]
+    aliases: [binary trees, bst, tree traversal, avl trees, balanced trees, red-black trees, splay trees]
+
+  - id: heaps
+    name: Heaps and priority queues
+    required_level: 3
+    prereqs: [trees]
+    aliases: [priority queue, priority queues]
+
+  - id: graphs
+    name: Graphs, BFS/DFS, topological sort
+    required_level: 4
+    prereqs: [trees]
+    aliases: [bfs, dfs, graph traversal, topological sort, shortest paths, dijkstra, minimum spanning tree, adjacency list, edge list]
+
+  - id: dynamic-programming
+    name: Dynamic programming
+    required_level: 4
+    prereqs: [recursion-backtracking, graphs]
+    aliases: [dp, memoization, tabulation]
+
+  - id: databases
+    name: SQL and indexing fundamentals
+    required_level: 3
+    prereqs: []
+    aliases: [indexing, sql, b-trees, relational algebra]
+
+  - id: system-design-basics
+    name: System design fundamentals (new-grad level)
+    required_level: 3
+    prereqs: [databases]
+    aliases: [system design, scalability, caching]

@@ -1,0 +1,78 @@
+# Roadmap: Google Associate Cloud Engineer (DRAFT — the user review)
+# Structured from the ACE exam guide domains. required_level refers to rubrics/depth.yaml.
+# aliases: note-topic spellings that count as evidence for this roadmap topic.
+# prereqs: give the graph its branch skeleton; gaps in prereqs surface first.
+
+goal: gcp-ace
+topics:
+  - id: resource-hierarchy
+    name: Projects, folders, orgs, billing structure
+    required_level: 2
+    prereqs: []
+    aliases: [gcp resource hierarchy, projects, billing, regions and zones, cloud infrastructure]
+
+  - id: iam
+    name: IAM roles, members, service accounts
+    required_level: 3
+    prereqs: [resource-hierarchy]
+    aliases: [gcp iam, iam basics, service accounts]
+
+  - id: gcloud-cli
+    name: gcloud / gsutil / bq command line
+    required_level: 3
+    prereqs: [resource-hierarchy]
+    aliases: [gcloud, cloud sdk]
+
+  - id: compute-engine
+    name: Compute Engine (VMs, instance groups, images)
+    required_level: 3
+    prereqs: [iam, gcloud-cli]
+    aliases: [gce, vms, instance groups]
+
+  - id: gke
+    name: Google Kubernetes Engine
+    required_level: 3
+    prereqs: [compute-engine]
+    aliases: [kubernetes, k8s]
+
+  - id: serverless
+    name: Cloud Run, Cloud Functions, App Engine
+    required_level: 2
+    prereqs: [gcloud-cli]
+    aliases: [cloud run, cloud functions, app engine]
+
+  - id: cloud-storage
+    name: Cloud Storage (classes, lifecycle, access)
+    required_level: 3
+    prereqs: [iam]
+    aliases: [gcs, storage classes, object storage]
+
+  - id: managed-databases
+    name: Cloud SQL, Firestore, BigQuery basics
+    required_level: 2
+    prereqs: [cloud-storage]
+    aliases: [cloud sql, firestore, bigquery, database migration]
+
+  - id: vpc-networking
+    name: VPC, subnets, firewall rules, routes
+    required_level: 3
+    prereqs: [resource-hierarchy]
+    aliases: [vpc, networking, subnets, firewall]
+
+  - id: load-balancing
+    name: Load balancing and DNS
+    required_level: 2
+    prereqs: [vpc-networking]
+    aliases: [cloud load balancing, cloud dns]
+
+  - id: deployment
+    name: Deploying workloads (MIGs, GKE deploys, IaC basics)
+    required_level: 2
+    prereqs: [compute-engine]
+    aliases: [deployment manager, terraform]
+
+  - id: operations
+    name: Monitoring, logging, alerting (ops suite)
+    required_level: 2
+    prereqs: [compute-engine]
+    aliases: [cloud monitoring, cloud logging, observability]

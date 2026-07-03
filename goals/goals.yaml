@@ -1,0 +1,17 @@
+# Your goals. Each goal's id is referenced by notes (frontmatter `goals:`) and
+# by roadmap files in goals/roadmaps/<id>.yaml. Priority: 1 (low) to 5 (highest).
+# Replace these examples with your real goals — your AI assistant can do this
+# with you interactively (see AI-SETUP.md).
+
+goals:
+  - id: example-cert
+    title: Example certification goal
+    priority: 4
+    deadline: 2027-01-01
+    description: Replace with a real cert or exam you are working toward.
+
+  - id: example-interviews
+    title: Example interview-prep goal
+    priority: 5
+    deadline: null
+    description: Replace with your target role or interview loop.

@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+*.db
+ui/graph.json
+ui/graph.data.js
+.DS_Store
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+joplin-export/

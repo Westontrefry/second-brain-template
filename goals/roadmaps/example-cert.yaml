@@ -1,0 +1,26 @@
+# Roadmap: example — replace with a real one per goal (filename = goals.yaml id).
+# required_level refers to rubrics/depth.yaml (0-5).
+# prereqs give the graph its branch skeleton; gaps in prereqs surface first.
+# aliases are THE JOIN KEY: a note counts as evidence for a roadmap topic when one
+# of the note's `topics:` matches the topic id or any alias (after slugifying).
+# Add every spelling you naturally use in notes — this is the most important field.
+
+goal: example-cert
+topics:
+  - id: fundamentals
+    name: Core fundamentals
+    required_level: 2
+    prereqs: []
+    aliases: [basics, core concepts]
+
+  - id: applied-topic
+    name: An applied topic building on fundamentals
+    required_level: 3
+    prereqs: [fundamentals]
+    aliases: [hands-on topic, practical topic]
+
+  - id: advanced-topic
+    name: An advanced topic
+    required_level: 3
+    prereqs: [applied-topic]
+    aliases: []

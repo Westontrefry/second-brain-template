@@ -1,0 +1,46 @@
+# Second Brain configuration. Domains are unbounded: to add one, create the folder
+# under knowledge/ and add it to the list below — nothing in code enumerates domains.
+
+paths:
+  knowledge_dir: knowledge
+  goals_file: goals/goals.yaml
+  roadmaps_dir: goals/roadmaps
+  rubric_file: rubrics/depth.yaml
+  db_path: brain.db
+  graph_json: ui/graph.json
+
+# Seed domains — rename or replace freely; they are just folders + list entries.
+domains:
+  - cs
+  - cloud
+  - career
+  - projects
+
+sources:
+  - study-session
+  - course
+  - ai-conversation
+  - import
+  - project
+  - quiz
+
+embedding:
+  model: sentence-transformers/all-MiniLM-L6-v2
+  dimensions: 384
+
+chunking:
+  max_chars: 1200
+  overlap_chars: 150
+
+# Evidence weighting for ai_confidence aggregation and topic-weight computation.
+# Weight of a piece of evidence = type multiplier * 0.5^(age_days / half_life_days).
+weights:
+  evidence_multiplier:
+    external_validation: 3.0
+    quiz: 2.0
+    application_note: 1.5
+    note: 1.0
+  decay_half_life_days:
+    external_validation: 365
+    quiz: 90
+    note: 180
