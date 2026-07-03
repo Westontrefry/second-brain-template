@@ -326,6 +326,10 @@ pathSel.addEventListener('change', () => {
 document.getElementById('gapToggle').addEventListener('change', applyModes);
 document.getElementById('divToggle').addEventListener('change', applyModes);
 render();
+// deep link: dashboard charts link here as ?focus=<topic-id> — open that
+// topic's drill-down exactly as if its node had been clicked.
+const focusParam = new URLSearchParams(location.search).get('focus');
+if (focusParam && G.nodes.some(n => n.id === focusParam)) drill(focusParam, true);
 }
 </script>
 </body>

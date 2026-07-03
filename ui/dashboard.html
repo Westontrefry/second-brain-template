@@ -65,6 +65,11 @@ if (!window.GRAPH) {
 } else {
 const G = window.GRAPH;
 
+// deep-link a topic into the graph page's drill-down panel
+function focusInGraph(id) {
+  window.location.href = 'index.html?focus=' + encodeURIComponent(id);
+}
+
 // ---- goal selector: only goals that have roadmap requirements ----
 const reqGoals = new Set();
 G.nodes.forEach(n => (n.requirements || []).forEach(r => reqGoals.add(r.goal)));
@@ -170,8 +175,10 @@ function drawScatter() {
     .attr('r', 5)
     .attr('fill', d => d.aiConfidence < d.selfConfidence ? 'var(--hot)' : 'var(--strong)')
     .attr('fill-opacity', .75)
+    .style('cursor', 'pointer')
+    .on('click', (e, d) => focusInGraph(d.id))
     .append('title')
-    .text(d => `${d.label}: self ${d.selfConfidence}, assessed ${d.aiConfidence}`);
+    .text(d => `${d.label}: self ${d.selfConfidence}, assessed ${d.aiConfidence}. Click to open in the graph.`);
   svg.selectAll('text.pt').data(pts).join('text').attr('class', 'pt')
     .attr('x', d => x(d.selfConfidence) + 7).attr('y', d => y(d.aiConfidence) + 3)
     .attr('font-size', '10px').attr('fill', 'var(--muted)').text(d => d.label);
@@ -188,7 +195,7 @@ function drawTreemap() {
   }
   const byDomain = d3.group(topics, t => t.domain || 'other');
   const data = {children: [...byDomain].map(([dom, ts]) => ({
-    name: dom, children: ts.map(t => ({name: t.label, value: t.weight})),
+    name: dom, children: ts.map(t => ({name: t.label, id: t.id, value: t.weight})),
   }))};
   const W = 640, H = 460;
   const root = d3.hierarchy(data)
@@ -209,13 +216,15 @@ function drawTreemap() {
     .text(d => `${d.data.name} — ${(d.value / total * 100).toFixed(0)}%`);
   // topic cells
   const leaf = svg.selectAll('g.leaf').data(root.leaves()).join('g')
-    .attr('class', 'leaf').attr('transform', d => `translate(${d.x0},${d.y0})`);
+    .attr('class', 'leaf').attr('transform', d => `translate(${d.x0},${d.y0})`)
+    .style('cursor', 'pointer')
+    .on('click', (e, d) => focusInGraph(d.data.id));
   leaf.append('rect')
     .attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0)
     .attr('fill', d => color(d.parent.data.name)).attr('fill-opacity', .55)
     .attr('stroke', '#fff').attr('stroke-width', .5)
     .append('title')
-    .text(d => `${d.data.name} — ${(d.value / total * 100).toFixed(1)}% of total weight`);
+    .text(d => `${d.data.name} — ${(d.value / total * 100).toFixed(1)}% of total weight. Click to open in the graph.`);
   leaf.filter(d => (d.x1 - d.x0) > 58 && (d.y1 - d.y0) > 15)
     .append('text')
     .attr('x', 3).attr('y', 11).attr('font-size', '9.5px').attr('fill', '#3a3a37')

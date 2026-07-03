@@ -65,7 +65,9 @@ matters for one goal, and tick **show gaps** to light up what's missing.
 - **Knowledge real estate** — every topic as a box; bigger box = more of your
   knowledge lives there, grouped and color-coded by area. Hover any box for
   its exact share. Great for spotting "wait, why is THAT taking up so much
-  room?" moments.
+  room?" moments. **Click any box** (or any dot on the divergence chart) and
+  it jumps you to that topic in the map with its full summary open — the
+  notes behind it, its scores, what goals need it.
 
 ### 3. Save something you just learned
 **What it is:** the daily habit. Studied something? Struggled with something?
