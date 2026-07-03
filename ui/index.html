@@ -147,7 +147,27 @@ const svg = d3.select('#graph'), stage = document.getElementById('stage');
 const W = stage.clientWidth, H = stage.clientHeight;
 const g = svg.append('g');
 const routeEl = g.append('path').attr('id', 'route');
-svg.call(d3.zoom().scaleExtent([0.25, 4]).on('zoom', e => g.attr('transform', e.transform)));
+const zoom = d3.zoom().scaleExtent([0.08, 4]).on('zoom', e => g.attr('transform', e.transform));
+svg.call(zoom);
+
+// Fit the camera to a set of node ids (or all nodes). Pass avail < W when the
+// right-hand panel is open so the target region stays clear of it.
+function fitView(ids, {duration = 600, padding = 70, avail = W} = {}) {
+  const pts = nodes.filter(n => !ids || ids.has(n.id));
+  if (!pts.length) return;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  pts.forEach(n => {
+    const r = radius(n) + 24;
+    x0 = Math.min(x0, n.x - r); y0 = Math.min(y0, n.y - r);
+    x1 = Math.max(x1, n.x + r); y1 = Math.max(y1, n.y + r);
+  });
+  const k = Math.max(0.08, Math.min(2,
+    (avail - 2 * padding) / (x1 - x0), (H - 2 * padding) / (y1 - y0)));
+  const t = d3.zoomIdentity
+    .translate(avail / 2 - k * (x0 + x1) / 2, H / 2 - k * (y0 + y1) / 2)
+    .scale(k);
+  (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
+}
 
 const goalSel = document.getElementById('goalSel');
 G.goals.forEach(gl => goalSel.add(new Option(gl.title, gl.id)));
@@ -198,18 +218,30 @@ function render() {
   node.append('text').attr('text-anchor', 'middle')
     .attr('dy', d => radius(d) + 13).text(d => d.label);
 
+  const tick = () => {
+    edge.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+    drawRoute();
+  };
   sim = d3.forceSimulation(nodes)
     .force('link', d3.forceLink(links).id(d => d.id)
       .distance(d => d.kind === 'prereq' ? 70 : 55).strength(d => Math.min(.2 + d.strength * .12, .9)))
     .force('charge', d3.forceManyBody().strength(-220))
     .force('center', d3.forceCenter(W / 2, H / 2))
+    // weak gravity keeps disconnected satellite clusters from flying so far
+    // that fitting the bounds shrinks the main component to a speck
+    .force('x', d3.forceX(W / 2).strength(0.05))
+    .force('y', d3.forceY(H / 2).strength(0.05))
     .force('collide', d3.forceCollide(d => radius(d) + 14))
-    .on('tick', () => {
-      edge.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
-          .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
-      node.attr('transform', d => `translate(${d.x},${d.y})`);
-      drawRoute();
-    });
+    .on('tick', tick);
+  // Pre-warm: settle the layout fully and synchronously so the first paint is
+  // final, then fit the camera to the whole graph — never a moving target.
+  // (Dragging a node re-heats the simulation via alphaTarget as before.)
+  sim.stop();
+  for (let i = 0; i < 600 && sim.alpha() > sim.alphaMin(); i++) sim.tick();
+  tick();
+  fitView(null, {duration: 0});
   applyModes();
 }
 
@@ -247,6 +279,8 @@ function drill(id, push) {
   focusId = id;
   if (push) crumbs.push(id);
   applyModes();
+  // bring the ego network into view, keeping clear of the detail panel
+  fitView(neighborSet(id), {avail: W - 344});
   const n = nodes.find(x => x.id === id) || G.nodes.find(x => x.id === id);
   const panel = document.getElementById('panel');
   const reqRows = (n.requirements || []).map(r =>
@@ -290,6 +324,7 @@ function clearFocus() {
   focusId = null; crumbs = [];
   document.getElementById('panel').style.display = 'none';
   applyModes();
+  fitView(null);
 }
 
 // ---- markdown note viewer (bodies bundled in notes.data.js) ----
