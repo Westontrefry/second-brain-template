@@ -145,13 +145,15 @@ def build(today: dt.date | None = None) -> dict:
 
     from .gaps import analyze
 
+    # Full lists, no silent cap — the panel scrolls, and a truncated ranking
+    # reads as "that's everything" when it isn't.
     suggestions: dict[str, list[dict]] = {}
     for gid, resolved in goal_resolved.items():
         suggestions[gid] = [
             {"nodeId": resolved.get(gp.topic_id, gp.topic_id), "name": gp.name,
              "action": gp.action, "score": round(gp.score, 1),
              "blockedBy": gp.blocked_by}
-            for gp in analyze(goal_id=gid, today=today)[:8]
+            for gp in analyze(goal_id=gid, today=today)
         ]
 
     # KME track layer: imported tracks (model/tracks/*.yaml) join the map
@@ -215,7 +217,7 @@ def build(today: dt.date | None = None) -> dict:
             {"nodeId": resolved.get(l.concept, l.concept), "name": l.name,
              "action": TRACK_ACTIONS.get(l.state, l.state),
              "score": len(gaps_lines) - i, "blockedBy": l.blocked_by}
-            for i, l in enumerate(gaps_lines[:8])
+            for i, l in enumerate(gaps_lines)
         ]
 
     for cid, cs in model.concepts.items():
