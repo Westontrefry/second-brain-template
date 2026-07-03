@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Second Brain — knowledge graph</title>
+<link rel="stylesheet" href="katex/katex.min.css">
 <style>
   :root { --strong:#1D9E75; --weak:#EF9F27; --hot:#D85A30; --dim-op:.12;
           --ink:#2c2c2a; --muted:#77766f; --line:#d9d7ce; --bg:#faf9f5; }
@@ -126,6 +127,7 @@
 </div>
 <script src="d3.v7.min.js"></script>
 <script src="marked.min.js"></script>
+<script src="katex/katex.min.js"></script>
 <script src="graph.data.js"></script>
 <script src="notes.data.js"></script>
 <script>
@@ -287,6 +289,37 @@ function clearFocus() {
 }
 
 // ---- markdown note viewer (bodies bundled in notes.data.js) ----
+// Notes are authored in Joplin with KaTeX math ($...$ / $$...$$). Math is
+// extracted to placeholders BEFORE the markdown pass (marked would mangle the
+// underscores), then each fragment is rendered with KaTeX afterwards.
+function renderMarkdown(src) {
+  if (!window.marked) return `<pre>${src.replace(/</g, '&lt;')}</pre>`;
+  const math = [];
+  let s = src;
+  if (window.katex) {
+    const stash = (tex, display) => {
+      math.push({tex, display});
+      return `⟦M${math.length - 1}⟧`;
+    };
+    s = s.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => stash(tex, true));
+    s = s.replace(/\$([^$\n]+?)\$/g, (m, tex) => {
+      // skip money/false positives: spaces at the edges, or no letters/commands
+      if (/^\s|\s$/.test(tex) || !/[\\a-zA-Z]/.test(tex)) return m;
+      return stash(tex, false);
+    });
+  }
+  let html = marked.parse(s);
+  html = html.replace(/⟦M(\d+)⟧/g, (_, i) => {
+    const {tex, display} = math[+i];
+    try {
+      return katex.renderToString(tex, {displayMode: display, throwOnError: false});
+    } catch {
+      return `<code>${tex.replace(/</g, '&lt;')}</code>`;
+    }
+  });
+  return html;
+}
+
 function viewNote(id, meta) {
   const overlay = document.getElementById('noteOverlay');
   const body = (window.NOTES || {})[id];
@@ -297,7 +330,7 @@ function viewNote(id, meta) {
   document.getElementById('noteBody').innerHTML =
     body === undefined
       ? '<p style="color:var(--muted)">Note body not bundled — run <code>python -m brain graph</code> to refresh.</p>'
-      : (window.marked ? marked.parse(body) : `<pre>${body.replace(/</g, '&lt;')}</pre>`);
+      : renderMarkdown(body);
   overlay.style.display = 'flex';
   document.getElementById('noteClose').addEventListener('click', closeNote);
 }
