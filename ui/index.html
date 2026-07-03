@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <title>Second Brain — knowledge graph</title>
 <link rel="stylesheet" href="katex/katex.min.css">
+<link rel="stylesheet" href="hljs-github.min.css">
 <style>
   :root { --strong:#1D9E75; --weak:#EF9F27; --hot:#D85A30; --dim-op:.12;
           --ink:#2c2c2a; --muted:#77766f; --line:#d9d7ce; --bg:#faf9f5; }
@@ -92,6 +93,7 @@
   #noteBody blockquote { border-left:3px solid var(--line); margin:8px 0; padding:2px 14px; color:var(--muted); }
   #noteBody img { max-width:100%; }
   #noteBody .mermaid { background:none; text-align:center; }
+  #noteBody code.hljs { background:transparent; }
   #noteBody .mermaid svg { max-width:100%; height:auto; }
   #panel .noteLink { color:#185FA5; cursor:pointer; }
 </style>
@@ -107,7 +109,7 @@
   </label>
   <label><input type="checkbox" id="gapToggle"> show gaps</label>
   <label><input type="checkbox" id="divToggle"> divergence</label>
-  <button id="refBtn" style="font:inherit; font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer;">? reference</button>
+  <button id="refBtn" style="font:inherit; font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer;">reference key</button>
   <a href="dashboard.html" style="font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); text-decoration:none;">dashboard →</a>
   <div id="legend">
     <span><span class="dot" style="background:var(--strong)"></span>strong (≥3)</span>
@@ -131,6 +133,8 @@
 <script src="marked.min.js"></script>
 <script src="katex/katex.min.js"></script>
 <script src="mermaid.min.js"></script>
+<script src="highlight.min.js"></script>
+<script src="hljs-armasm.min.js"></script>
 <script src="graph.data.js"></script>
 <script src="notes.data.js"></script>
 <script>
@@ -337,8 +341,8 @@ function clearFocus() {
 function renderMarkdown(src) {
   if (!window.marked) return `<pre>${src.replace(/</g, '&lt;')}</pre>`;
   const fences = [], math = [];
-  let s = src.replace(/```(\w*)[ \t]*\n([\s\S]*?)```/g, (_, lang, code) => {
-    fences.push({lang, code});
+  let s = src.replace(/```([^\n]*)\n([\s\S]*?)```/g, (_, lang, code) => {
+    fences.push({lang: lang.trim(), code});
     return `⟦C${fences.length - 1}⟧`;
   });
   if (window.katex) {
@@ -362,12 +366,18 @@ function renderMarkdown(src) {
       return `<code>${tex.replace(/</g, '&lt;')}</code>`;
     }
   });
+  // Joplin fence tags -> highlight.js language names. Tags with no highlighter
+  // map to plaintext so auto-detection doesn't guess-color pseudocode.
+  const LANG_ALIAS = {'c++': 'cpp', 'python3': 'python', 'arm': 'armasm',
+                      'assembly': 'armasm', 'pseudocode': 'plaintext',
+                      'wolframalpha': 'plaintext', 'plantuml': 'plaintext',
+                      'mel': 'plaintext', 'prose': 'plaintext'};
   html = html.replace(/(?:<p>)?⟦C(\d+)⟧(?:<\/p>)?/g, (_, i) => {
     const {lang, code} = fences[+i];
     const esc = code.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-    return lang === 'mermaid'
-      ? `<pre class="mermaid">${esc}</pre>`
-      : `<pre><code class="language-${lang}">${esc}</code></pre>`;
+    if (lang === 'mermaid') return `<pre class="mermaid">${esc}</pre>`;
+    const l = lang.toLowerCase();
+    return `<pre><code class="language-${LANG_ALIAS[l] || l}">${esc}</code></pre>`;
   });
   return html;
 }
@@ -386,6 +396,9 @@ function viewNote(id, meta) {
       : renderMarkdown(body);
   if (window.mermaid && nb.querySelector('.mermaid')) {
     mermaid.run({nodes: nb.querySelectorAll('.mermaid')}).catch(() => {});
+  }
+  if (window.hljs) {
+    nb.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
   }
   overlay.style.display = 'flex';
   document.getElementById('noteClose').addEventListener('click', closeNote);
