@@ -61,6 +61,11 @@
              overflow-y:auto; background:var(--panel); border:1px solid var(--line); border-radius:10px;
              padding:12px 14px; box-shadow:0 4px 18px rgba(0,0,0,.08); display:none; }
   #suggest h2 { font-size:13px; margin:0 0 8px; }
+  #sugHead { display:flex; align-items:center; gap:8px; }
+  #sugHead h2 { flex:1; margin:0; cursor:pointer; }
+  #sugHead button { border:none; background:none; cursor:pointer; font-size:15px;
+                    color:var(--muted); padding:0 2px; line-height:1; }
+  #sugBody { margin-top:8px; }
   .sugItem { padding:7px 8px; border:1px solid var(--line); border-radius:8px; margin-bottom:6px;
              font-size:12.5px; cursor:pointer; background:var(--panel); }
   .sugItem:hover { border-color:var(--ink); }
@@ -463,26 +468,42 @@ function drawRoute() {
   routeEl.attr('d', d3.line().curve(d3.curveCatmullRom)(pts.map(p => [p.x, p.y])));
 }
 
+let suggestCollapsed = false;
 function renderSuggest() {
   const el = document.getElementById('suggest');
-  const items = [];
+  let title = '';
+  const body = [];
   if (route && route.suggestions) {
-    items.push(`<h2>Pathway: ${route.title || route.slug}</h2>`);
+    title = `Pathway: ${route.title || route.slug}`;
     route.suggestions.forEach(s => {
       const text = typeof s === 'string' ? s : s.text;
       const nid = typeof s === 'string' ? null : s.nodeId;
-      items.push(`<div class="sugItem" ${nid ? `data-node="${nid}"` : ''}>${text}</div>`);
+      body.push(`<div class="sugItem" ${nid ? `data-node="${nid}"` : ''}>${text}</div>`);
     });
   } else if (goalSel.value && (G.suggestions || {})[goalSel.value]) {
-    items.push('<h2>Suggested next actions</h2>');
+    title = 'Suggested next actions';
     G.suggestions[goalSel.value].forEach(s => {
-      items.push(`<div class="sugItem" data-node="${s.nodeId}">
+      body.push(`<div class="sugItem" data-node="${s.nodeId}">
         <span class="score">${s.score}</span><strong>${s.name}</strong>
         <div class="act">${s.action}${s.blockedBy.length ? ' · first: ' + s.blockedBy.join(', ') : ''}</div></div>`);
     });
   }
-  el.innerHTML = items.join('');
-  el.style.display = items.length ? 'block' : 'none';
+  if (!title) { el.style.display = 'none'; return; }
+  el.innerHTML = `
+    <div id="sugHead"><h2>${title}</h2>
+      <button id="sugToggle" title="${suggestCollapsed ? 'expand' : 'minimize'}">${suggestCollapsed ? '+' : '–'}</button>
+    </div>
+    <div id="sugBody" style="display:${suggestCollapsed ? 'none' : 'block'}">${body.join('')}</div>`;
+  el.style.display = 'block';
+  const toggle = () => {
+    suggestCollapsed = !suggestCollapsed;
+    document.getElementById('sugBody').style.display = suggestCollapsed ? 'none' : 'block';
+    const btn = document.getElementById('sugToggle');
+    btn.textContent = suggestCollapsed ? '+' : '–';
+    btn.title = suggestCollapsed ? 'expand' : 'minimize';
+  };
+  document.getElementById('sugToggle').addEventListener('click', toggle);
+  el.querySelector('#sugHead h2').addEventListener('click', toggle);
   el.querySelectorAll('[data-node]').forEach(d =>
     d.addEventListener('click', () => drill(d.dataset.node, true)));
 }
