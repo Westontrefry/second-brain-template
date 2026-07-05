@@ -35,7 +35,7 @@ def test_full_lifecycle(sandbox: Path):
     assert r.returncode == 0 and "btree-vs-hash-indexes" in r.stdout
 
     r = brain(sandbox, "add", "--domain", "cs", "--title", "E2E test note",
-              "--topics", "testing", "--goals", "uf-cs-degree",
+              "--topics", "testing", "--goals", "cs-degree",
               "--body", "Content created by the e2e suite to prove add works.")
     assert r.returncode == 0 and "added and indexed" in r.stdout
 

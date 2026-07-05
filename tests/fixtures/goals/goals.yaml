@@ -3,8 +3,8 @@
 # Deadlines are initial estimates — flagged for the user's review in PROGRESS.md.
 
 goals:
-  - id: uf-cs-degree
-    title: UF CS degree — final semesters
+  - id: cs-degree
+    title: CS degree — final semesters
     priority: 5
     deadline: 2027-05-01
     description: Complete remaining coursework with strong grades.
@@ -38,8 +38,8 @@ goals:
       Competitive candidacy: resume, portfolio, behavioral prep, applications,
       and the market signal that comes from shipped projects and certs.
 
-  - id: ebapp
-    title: EB.app development
+  - id: sideproject
+    title: Side-project development
     priority: 4
     deadline: null
     description: Personal software project; primary source of application-level evidence.

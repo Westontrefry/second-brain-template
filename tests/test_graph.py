@@ -36,7 +36,7 @@ def test_cooccur_and_wikilink_edges(sandbox):
     g = build(today=TODAY)
     cooccur = edge_between(g, "databases", "indexing")
     assert cooccur is not None and cooccur["kind"] == "cooccur"
-    # the ebapp auth note [[links]] the b-tree note -> cross-note topic edge
+    # the side-project auth note [[links]] the b-tree note -> cross-note topic edge
     wikilink = edge_between(g, "authentication", "databases")
     assert wikilink is not None and wikilink["kind"] == "wikilink"
 

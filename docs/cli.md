@@ -11,7 +11,7 @@ Check notes against the schema. `brain validate [paths...] [-v]`
 Create a note and index it. The only way to create notes by hand.
 ```
 brain add --domain cs --title "MLFQ review" --topics "os,scheduling" \
-  --goals uf-cs-degree --source study-session --confidence 2 --importance 3 \
+  --goals cs-degree --source study-session --confidence 2 --importance 3 \
   --body "..."          # omit --body to read from stdin
 ```
 - Title becomes the id slug (`2026-07-02-mlfq-review`). Rejects invalid notes.

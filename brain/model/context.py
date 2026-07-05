@@ -44,7 +44,7 @@ def build_context(track: str | None = None, goal: str | None = None,
         selected = model.tracks
 
     # Goal-backed tracks lead, highest priority first — the export's order IS
-    # its advice, so it must reflect what Weston cares about most.
+    # its advice, so it must reflect what the user cares about most.
     selected = sorted(selected, key=lambda t: -(goals.get(t.track, {}).get("priority") or 0))
     reports = [readiness(t.track, model=model) for t in selected]
 

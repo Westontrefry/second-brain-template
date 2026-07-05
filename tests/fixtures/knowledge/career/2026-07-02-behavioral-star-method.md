@@ -16,6 +16,6 @@ exposure_count: 1
 
 STAR = Situation, Task, Action, Result. The trap is spending 80% on Situation; strong
 answers invert that — one sentence of context, then concrete personal actions ("I did X",
-not "we did X") and a measurable result. Drafted three stories from EB.app work:
+not "we did X") and a measurable result. Drafted three stories from side-project work:
 debugging the auth regression, scoping down the v1 feature set, and onboarding a
 teammate to the codebase.

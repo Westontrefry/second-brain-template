@@ -8,7 +8,7 @@ ai_confidence: null
 ai_confidence_rationale: null
 last_assessed: null
 importance: 4
-goals: [dsa-interviews, uf-cs-degree]
+goals: [dsa-interviews, cs-degree]
 created: 2026-07-02
 last_reviewed: 2026-07-02
 exposure_count: 1
