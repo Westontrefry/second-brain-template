@@ -6,7 +6,7 @@ import yaml
 from brain.gaps import analyze, load_roadmap
 from brain.model import registry
 from brain.model.tracks import (
-    Track, blocking, evidence_levels, from_roadmap, load_track, load_tracks,
+    blocking, evidence_levels, from_roadmap, load_track, load_tracks,
     validate_track,
 )
 from brain.weights import collect

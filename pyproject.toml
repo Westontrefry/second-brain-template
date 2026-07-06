@@ -31,3 +31,20 @@ brain = "brain.cli:main"
 # repo data the code finds via config.root(), not package data.
 [tool.setuptools]
 packages = ["brain", "brain.model"]
+
+# --- Dev tooling (CI gates; not runtime deps — see requirements-dev.txt) ---
+# Ruff runs the default lint set (pyflakes F + pycodestyle E). Kept minimal so
+# the gate catches real mistakes (unused imports, undefined names) without
+# imposing a style rewrite on an existing codebase.
+[tool.ruff]
+target-version = "py310"
+
+# Mypy checks annotated signatures only (untyped function bodies are skipped by
+# default) — a light typecheck that flags real None/type mistakes at call sites.
+# Third-party libs (numpy, sentence-transformers, fastapi) ship without stubs,
+# so missing imports are ignored rather than failing the run.
+[tool.mypy]
+# Matches the CI interpreter (setup-python 3.12). Pinned below the runtime so a
+# lower pin (e.g. 3.10) doesn't trip over numpy's 3.12+ typed-stub syntax.
+python_version = "3.12"
+ignore_missing_imports = true

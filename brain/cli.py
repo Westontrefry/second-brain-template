@@ -233,7 +233,7 @@ def cmd_first_touch(args: argparse.Namespace) -> int:
 def cmd_demo(args: argparse.Namespace) -> int:
     from collections import Counter
 
-    from .demo import install, installed, remove
+    from .demo import install, remove
     from .ingest import sync
 
     if args.install:
@@ -408,7 +408,6 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 def cmd_status(args: argparse.Namespace) -> int:
     import hashlib
-    import sqlite3
 
     from . import store
 

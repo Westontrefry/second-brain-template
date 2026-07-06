@@ -113,6 +113,7 @@ def add_topics(goal_id: str, proposed: list[Proposed], *,
 
     if accepted:
         path = result.roadmap_path
+        assert path is not None  # accepted proposals imply a resolved roadmap path
         text = path.read_text(encoding="utf-8").rstrip("\n") + "\n"
         block = (f"\n  # --- frontier expansion ({today.isoformat()}) ---\n"
                  + "".join(_render_topic(p) for p in accepted))

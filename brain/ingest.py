@@ -54,6 +54,7 @@ def sync(full: bool = False) -> dict[str, int]:
             print(f"skip (invalid) {path}: {errors[0]}")
             continue
 
+        assert note is not None  # a None note leaves errors set, handled above
         m = note.meta
         seen.add(m["id"])
         content_hash = hashlib.sha256(path.read_bytes()).hexdigest()
