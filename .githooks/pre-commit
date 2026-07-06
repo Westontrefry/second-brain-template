@@ -3,7 +3,11 @@
 # branch that lands via PR, where CI (sanitization, tests, lint, typecheck,
 # scanners) runs before it reaches main.
 #
-# Enable in your clone:   git config core.hooksPath .githooks
+# Enable in your clone by installing it into the shared hooks dir (works from
+# every worktree; a relative core.hooksPath does not — git resolves it against
+# $GIT_DIR, not the checkout):
+#     cp .githooks/pre-commit "$(git rev-parse --git-common-dir)/hooks/pre-commit"
+#     chmod +x "$(git rev-parse --git-common-dir)/hooks/pre-commit"
 # Escape hatch (merges, the very first commit, etc.):
 #     ALLOW_MAIN=1 git commit ...
 branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
