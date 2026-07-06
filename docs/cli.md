@@ -102,6 +102,11 @@ drives your skills. `brain cockpit [--host 127.0.0.1] [--port 8765]`
   `claude -p` session (subscription-covered, still $0 — no API keys) and stream
   the reply back live; a reply box continues multi-turn quiz/review. Ingest /
   Graph / Gaps / Status / Doctor run in-process with no AI.
+- Topic selection is guided, not free-typed: the dock's Quiz/Review composer
+  autocompletes from your real topic names (blank still = let it choose), and
+  clicking a node on the map adds Quiz / Review / Log buttons to its detail card
+  that act on that topic directly — Quiz/Review fire at once, Log seeds the note
+  with the topic. Those per-node buttons appear only when the cockpit is live.
 - The server never writes knowledge, events, or scores itself — every write goes
   through a skill inside the headless session, the same sanctioned path as chat.
 - localhost, single user. The headless turn runs with bypassPermissions so it

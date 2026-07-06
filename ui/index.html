@@ -218,6 +218,18 @@
                      border:1px solid var(--line); border-radius:6px; }
   #cockReply button { font:inherit; font-size:12.5px; padding:5px 12px; border:1px solid var(--link);
                       border-radius:6px; background:var(--panel); color:var(--link); cursor:pointer; }
+  /* compose row: pick a topic (autocompleted from real topics) before an AI action */
+  #cockCompose { display:none; gap:6px; padding:10px 14px; border-top:1px solid var(--line); }
+  #cockCompose.on { display:flex; }
+  #cockCompose input { flex:1; font:inherit; font-size:12.5px; padding:5px 8px;
+                       border:1px solid var(--line); border-radius:6px; }
+  #cockCompose button { font:inherit; font-size:12.5px; padding:5px 12px; border:1px solid var(--link);
+                        border-radius:6px; background:var(--panel); color:var(--link); cursor:pointer; }
+  /* per-topic action row in the graph's node panel (only when the cockpit is live) */
+  #panel .nodeAct { display:flex; gap:6px; margin:8px 0 2px; }
+  #panel .nodeAct button { font:inherit; font-size:12px; padding:3px 12px; border:1px solid var(--link);
+                           border-radius:16px; background:var(--panel); color:var(--link); cursor:pointer; }
+  #panel .nodeAct button:hover { background:var(--link); color:#fff; }
 </style>
 </head>
 <body data-view="map">
@@ -315,6 +327,11 @@
     <button data-mech="doctor">Doctor</button>
   </div>
   <div id="cockOut"></div>
+  <div id="cockCompose">
+    <input id="cockComposeBox" type="text" list="cockTopics" autocomplete="off">
+    <button id="cockComposeGo">Go</button>
+  </div>
+  <datalist id="cockTopics"></datalist>
   <div id="cockReply">
     <input id="cockReplyBox" type="text" placeholder="type your answer…" autocomplete="off">
     <button id="cockSend">Send</button>
@@ -667,11 +684,18 @@ function drill(id, push) {
   const crumbHtml = crumbs.map((c, i) =>
     `<span data-crumb="${i}">${c}</span>`).join(' › ');
   const pct = Math.min(n.evidenced / 5 * 100, 100);
+  // When the cockpit server is live, offer to drive quiz/review/log on this
+  // very topic — no typing. Hidden on file:// (cockpit.live is false there).
+  const actHtml = (window.cockpit && window.cockpit.live) ? `<div class="nodeAct">
+    <button data-act="quiz" title="quiz me on this topic">Quiz</button>
+    <button data-act="review" title="review this topic">Review</button>
+    <button data-act="log" title="log a note on this topic">Log</button></div>` : '';
   panel.innerHTML = `
     <button id="closeBtn" title="close">✕</button>
     <div id="crumbs">${crumbHtml}</div>
     <h2>${n.label}</h2>
     <div class="sub">${n.type === 'missing' ? 'not yet covered' : (n.domain || '')} · weight ${n.weight}${n.convergence ? ` · in ${n.convergence} track${n.convergence > 1 ? 's' : ''}` : ''}</div>
+    ${actHtml}
     <h3>Evidenced level</h3>
     <div>${n.evidenced} / 5</div>
     <div class="bar"><i style="width:${pct}%;background:${color(n)}"></i></div>
@@ -693,6 +717,13 @@ function drill(id, push) {
       (n.notes || []).find(x => x.id === el.dataset.view))));
   panel.querySelectorAll('[data-crumb]').forEach(el =>
     el.addEventListener('click', () => { crumbs = crumbs.slice(0, +el.dataset.crumb + 1); drill(crumbs.at(-1), false); }));
+  panel.querySelectorAll('.nodeAct button').forEach(el =>
+    el.addEventListener('click', () => {
+      const a = el.dataset.act;
+      // quiz/review fire straight away on this topic; log seeds the sentence.
+      if (a === 'log') window.cockpit.start('log', 'Studied ' + n.label + ': ', false);
+      else window.cockpit.start(a, n.label, true);
+    }));
   const noteFilter = panel.querySelector('#noteFilter');
   if (noteFilter) {
     noteFilter.addEventListener('input', () => {
@@ -1376,15 +1407,35 @@ requestAnimationFrame(() => maybeCoach(document.body.dataset.view));
   const actions = document.getElementById('cockActions');
   const reply = document.getElementById('cockReply');
   const replyBox = document.getElementById('cockReplyBox');
+  const compose = document.getElementById('cockCompose');
+  const composeBox = document.getElementById('cockComposeBox');
   let session = null;      // active AI session id (for --resume follow-ups)
   let busy = false;
   let hasClaude = false;
+  let pending = null;      // AI action awaiting a topic/content from the compose row
+
+  // A tiny API so the graph's node detail panel can drive the cockpit directly
+  // (Quiz/Review/Log on the clicked topic). `live` gates those buttons.
+  const api = { live: false, start: startAction, open: () => dock.classList.add('open') };
+  window.cockpit = api;
 
   fetch('api/health').then(r => r.ok ? r.json() : null).then(h => {
     if (!h || !h.ok) return;
     hasClaude = !!h.claude;
+    api.live = hasClaude;
     btn.classList.add('live');
+    fillTopics();
   }).catch(() => {});   // file:// or server down — stay invisible
+
+  // Seed the topic autocomplete from the graph's real topic labels.
+  function fillTopics() {
+    const dl = document.getElementById('cockTopics');
+    if (!dl || dl.childElementCount) return;
+    const seen = new Set();
+    ((window.GRAPH && window.GRAPH.nodes) || []).forEach(n => { if (n.label) seen.add(n.label); });
+    dl.innerHTML = [...seen].sort().map(l =>
+      `<option value="${l.replace(/"/g, '&quot;')}"></option>`).join('');
+  }
 
   btn.addEventListener('click', () => dock.classList.toggle('open'));
   document.getElementById('cockClose').addEventListener('click', () => dock.classList.remove('open'));
@@ -1401,6 +1452,7 @@ requestAnimationFrame(() => maybeCoach(document.body.dataset.view));
     busy = b;
     actions.querySelectorAll('button').forEach(x => x.disabled = b);
     document.getElementById('cockSend').disabled = b;
+    document.getElementById('cockComposeGo').disabled = b;
   }
 
   // Parse an SSE stream from a fetch Response body, dispatching per event.
@@ -1463,17 +1515,48 @@ requestAnimationFrame(() => maybeCoach(document.body.dataset.view));
         .finally(() => setBusy(false));
       return;
     }
-    const action = b.dataset.action;
+    // AI action from the dock: open the compose row so the topic/content is
+    // picked with autocomplete, not typed into a blank browser prompt.
+    startAction(b.dataset.action, '', false);
+  });
+
+  // Start an AI action. quiz/review with a topic already known (e.g. from a
+  // clicked node) fire immediately; anything still needing input opens the
+  // compose row, seeded and focused, with the topic autocomplete attached.
+  function startAction(action, preset, fireNow) {
+    api.open();
     if (!hasClaude) { line('\nClaude Code CLI not found — AI actions need it on PATH.\n', 'sys'); return; }
-    let text = '';
-    if (action === 'log') text = prompt('What did you study? (one sentence)') || '';
-    else if (action === 'quiz') text = prompt('Quiz topic? (blank = let it choose)') || '';
-    else if (action === 'review') text = prompt('Review focus? (blank = what needs it)') || '';
-    if (action === 'log' && !text.trim()) return;   // log needs content
+    if (fireNow) {
+      pending = null;
+      compose.classList.remove('on');
+      session = null;
+      line('\n▸ ' + action + (preset ? ': ' + preset : '') + '\n', 'sys');
+      stream('api/action', { action, text: preset || '' });
+      return;
+    }
+    pending = action;
+    composeBox.value = preset || '';
+    composeBox.placeholder = action === 'log' ? 'what did you study?'
+      : action === 'review' ? 'review focus? (blank = what needs it)'
+      : 'topic? (blank = let it choose)';
+    compose.classList.add('on');
+    composeBox.focus();
+    composeBox.setSelectionRange(composeBox.value.length, composeBox.value.length);
+  }
+
+  function submitCompose() {
+    if (busy || !pending) return;
+    const text = composeBox.value.trim();
+    if (pending === 'log' && !text) return;   // a log needs content
+    const action = pending;
+    pending = null;
+    compose.classList.remove('on');
     session = null;
     line('\n▸ ' + action + (text ? ': ' + text : '') + '\n', 'sys');
     stream('api/action', { action, text });
-  });
+  }
+  document.getElementById('cockComposeGo').addEventListener('click', submitCompose);
+  composeBox.addEventListener('keydown', e => { if (e.key === 'Enter') submitCompose(); });
 
   function sendReply() {
     const text = replyBox.value.trim();

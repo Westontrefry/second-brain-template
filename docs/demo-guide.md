@@ -236,6 +236,14 @@ lets you answer back for a full quiz or review. It still costs nothing to run.
 The other buttons (Ingest, Graph, Gaps, Status, Doctor) are the plumbing
 commands, run for you with one click.
 
+Even easier, you rarely have to name a topic at all. Click any dot on the map
+and its card grows its own Quiz, Review, and Log buttons. Hit Quiz there and it
+quizzes you on that exact topic right away, with nothing to type. Log there and
+it starts the note for you with the topic already filled in. And when you do
+kick off a quiz or review from the dock itself, it no longer makes you guess a
+topic into a blank box. It suggests your real topics as you type, so you just
+pick one and go.
+
 One promise holds here too. The panel never writes to your knowledge on its
 own. Every score, every note, every event still goes through the same skill it
 always did, with the same receipts. The button is just a faster way to press
