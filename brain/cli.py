@@ -373,6 +373,20 @@ def cmd_ui(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_cockpit(args: argparse.Namespace) -> int:
+    from .cockpit import missing_deps, serve
+
+    miss = missing_deps()
+    if miss:
+        # Optional extra not installed — hint, don't traceback (ux.md #8).
+        print("the cockpit needs its optional server deps. install them with:")
+        print('  pip install -e ".[cockpit]"')
+        print(f"(missing: {', '.join(miss)})")
+        return 1
+    serve(host=args.host, port=args.port)
+    return 0
+
+
 def cmd_backup(args: argparse.Namespace) -> int:
     from .backup import push, setup_text
 
@@ -547,6 +561,13 @@ def build_parser() -> argparse.ArgumentParser:
                    help="mark the map coach-mark seen on load (used by the /start tour "
                         "after it has explained the map itself)")
     p.set_defaults(func=cmd_ui)
+
+    p = sub.add_parser("cockpit",
+                       help="launch the local web cockpit (opt-in; buttons drive "
+                            "quiz/log/review via headless Claude, plus no-AI ops)")
+    p.add_argument("--host", default="127.0.0.1", help="bind address (default: localhost)")
+    p.add_argument("--port", type=int, default=8765, help="port (default: 8765)")
+    p.set_defaults(func=cmd_cockpit)
 
     p = sub.add_parser("status", help="counts and index freshness")
     p.set_defaults(func=cmd_status)

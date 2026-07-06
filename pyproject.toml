@@ -15,6 +15,15 @@ dependencies = [
     "numpy>=1.26",
 ]
 
+# The web cockpit (Arc B rung 2) is an OPTIONAL surface — its server deps live
+# here so the core install stays light. `pip install -e ".[cockpit]"`; without
+# it, `brain cockpit` prints the install hint instead of a traceback.
+[project.optional-dependencies]
+cockpit = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+]
+
 [project.scripts]
 brain = "brain.cli:main"
 

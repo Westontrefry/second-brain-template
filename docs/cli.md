@@ -89,6 +89,25 @@ generated <ago>" so a stale tab self-diagnoses. `--toured` (used by /start
 step 4 only) opens with `?toured=1`, which retires the Map view's first-visit
 coach-mark — the tour just taught the same ground.
 
+## cockpit
+Launch the local web cockpit (Arc B rung 2): the same map, plus a dock that
+drives your skills. `brain cockpit [--host 127.0.0.1] [--port 8765]`
+- Opt-in surface — needs the optional server extra. Install it once with
+  `pip install -e ".[cockpit]"` (adds fastapi + uvicorn). Without it the command
+  prints that install hint, never a traceback.
+- The map is unchanged; a "Cockpit" button appears in the header only when this
+  server answers. Over `file://` (or `brain ui`, which has no API) the button
+  stays hidden, so the file-first behaviour is untouched.
+- Dock buttons: Log / Quiz / Review run the matching skill in a headless
+  `claude -p` session (subscription-covered, still $0 — no API keys) and stream
+  the reply back live; a reply box continues multi-turn quiz/review. Ingest /
+  Graph / Gaps / Status / Doctor run in-process with no AI.
+- The server never writes knowledge, events, or scores itself — every write goes
+  through a skill inside the headless session, the same sanctioned path as chat.
+- localhost, single user. The headless turn runs with bypassPermissions so it
+  can run the skills' own `brain` write commands unattended; the skills still
+  enforce their evidence discipline in their own text.
+
 ## model import
 Teach the knowledge model a learning resource (the Knowledge Model Engine —
 see [architecture.md](architecture.md)).

@@ -219,6 +219,28 @@ pictures:
   topic in the map with its full summary open — the notes behind it, its
   scores, what goals need it.
 
+### Drive it from the map (the cockpit)
+Most of the time you talk to it in Claude Code. But if you want to run the
+whole thing from the map itself, there's an opt-in panel called the cockpit.
+
+You turn it on once. In a terminal, install the little server it needs
+(`pip install -e ".[cockpit]"`), then run `brain cockpit` and open the page
+it prints. A small "Cockpit" button shows up in the header. Open the plain
+map the normal way and that button simply is not there, so nothing about the
+everyday map changes.
+
+Click it and a dock slides out with buttons. Log, Quiz, and Review do exactly
+what the chat commands do. The system quietly runs the same skill for you in
+the background and streams the reply right into the panel, and a little box
+lets you answer back for a full quiz or review. It still costs nothing to run.
+The other buttons (Ingest, Graph, Gaps, Status, Doctor) are the plumbing
+commands, run for you with one click.
+
+One promise holds here too. The panel never writes to your knowledge on its
+own. Every score, every note, every event still goes through the same skill it
+always did, with the same receipts. The button is just a faster way to press
+go.
+
 ---
 
 ## The rest of the network

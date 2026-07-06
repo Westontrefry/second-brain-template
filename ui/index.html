@@ -182,6 +182,42 @@
              display:inline-flex; align-items:center; justify-content:center;
              margin-left:6px; user-select:none; }
   .helpBtn:hover { color:var(--ink); border-color:var(--ink); }
+  /* ---- cockpit dock (Arc B rung 2): appears only when served by `brain
+     cockpit`; invisible on file:// so the shell's file-first invariant holds ---- */
+  #cockBtn { display:none; font:inherit; font-size:12.5px; padding:3px 10px;
+             border:1px solid var(--line); border-radius:6px; background:var(--panel);
+             cursor:pointer; color:var(--ink); }
+  #cockBtn.live { display:inline-flex; align-items:center; gap:5px; }
+  #cockBtn .pip { width:7px; height:7px; border-radius:50%; background:var(--lvl3); }
+  #cockDock { position:fixed; right:14px; bottom:14px; z-index:58; width:360px;
+              max-height:min(78vh, 620px); display:none; flex-direction:column;
+              background:var(--panel); border:1px solid var(--line); border-radius:12px;
+              box-shadow:0 10px 34px rgba(0,0,0,.22); overflow:hidden; }
+  #cockDock.open { display:flex; }
+  #cockHead { display:flex; align-items:center; gap:8px; padding:10px 14px;
+              border-bottom:1px solid var(--line); }
+  #cockHead h2 { font-size:13px; margin:0; font-weight:600; }
+  #cockHead .sp { margin-left:auto; }
+  #cockClose { border:none; background:none; font-size:15px; cursor:pointer; color:var(--muted); }
+  #cockActions { display:flex; flex-wrap:wrap; gap:6px; padding:10px 14px; }
+  #cockActions button { font:inherit; font-size:12.5px; padding:4px 11px; border:1px solid var(--line);
+                        border-radius:16px; background:var(--panel); cursor:pointer; color:var(--ink); }
+  #cockActions button:hover { border-color:var(--ink); }
+  #cockActions button.ai { border-color:var(--link); color:var(--link); }
+  #cockActions button:disabled { opacity:.5; cursor:default; border-color:var(--line); color:var(--muted); }
+  #cockActions .grp { width:100%; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em;
+                      color:var(--muted); margin:4px 0 -2px; }
+  #cockOut { flex:1; overflow-y:auto; padding:4px 14px 12px; font-size:12.5px; line-height:1.55;
+             white-space:pre-wrap; word-break:break-word; min-height:44px; }
+  #cockOut .sys { color:var(--muted); font-style:italic; }
+  #cockOut .tool { color:var(--muted); font-size:11.5px; }
+  #cockOut code, #cockOut pre { background:var(--code-bg); border-radius:4px; padding:0 3px; }
+  #cockReply { display:none; gap:6px; padding:10px 14px; border-top:1px solid var(--line); }
+  #cockReply.on { display:flex; }
+  #cockReply input { flex:1; font:inherit; font-size:12.5px; padding:5px 8px;
+                     border:1px solid var(--line); border-radius:6px; }
+  #cockReply button { font:inherit; font-size:12.5px; padding:5px 12px; border:1px solid var(--link);
+                      border-radius:6px; background:var(--panel); color:var(--link); cursor:pointer; }
 </style>
 </head>
 <body data-view="map">
@@ -206,6 +242,7 @@
   <label class="maponly"><input type="checkbox" id="gapToggle"> show gaps</label>
   <label class="maponly"><input type="checkbox" id="divToggle"> divergence</label>
   <span class="helpBtn maponly" data-help="map" title="what am I looking at?">?</span>
+  <button id="cockBtn" title="drive quiz / log / review from here"><span class="pip"></span>Cockpit</button>
   <button id="refBtn" style="font:inherit; font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer;">reference key</button>
   <button id="themeBtn" title="toggle dark mode" style="padding:4px 8px; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color:var(--muted);"></button>
   <span id="dataAge" style="font-size:11.5px; color:var(--muted); white-space:nowrap;"></span>
@@ -259,6 +296,30 @@
 <div id="cmCatch"></div>
 <div id="cmSpot"></div>
 <div id="cmCard"></div>
+<div id="cockDock">
+  <div id="cockHead">
+    <h2>Cockpit</h2>
+    <span class="sp"></span>
+    <button id="cockClose" title="close">✕</button>
+  </div>
+  <div id="cockActions">
+    <div class="grp">learn (AI)</div>
+    <button class="ai" data-action="log">Log</button>
+    <button class="ai" data-action="quiz">Quiz</button>
+    <button class="ai" data-action="review">Review</button>
+    <div class="grp">refresh (no AI)</div>
+    <button data-mech="ingest">Ingest</button>
+    <button data-mech="graph">Graph</button>
+    <button data-mech="gaps">Gaps</button>
+    <button data-mech="status">Status</button>
+    <button data-mech="doctor">Doctor</button>
+  </div>
+  <div id="cockOut"></div>
+  <div id="cockReply">
+    <input id="cockReplyBox" type="text" placeholder="type your answer…" autocomplete="off">
+    <button id="cockSend">Send</button>
+  </div>
+</div>
 <script src="d3.v7.min.js"></script>
 <script src="marked.min.js"></script>
 <script src="katex/katex.min.js"></script>
@@ -1300,6 +1361,130 @@ if (params.get('toured') === '1') localStorage.setItem('sb-hint-map', '1');
 // first-visit coach-mark for the landing view (setView covers later switches)
 requestAnimationFrame(() => maybeCoach(document.body.dataset.view));
 }
+</script>
+<script>
+// ---- cockpit dock (Arc B rung 2) ---------------------------------------
+// Self-contained and additive: feature-detects the `brain cockpit` server via
+// /api/health. On file:// (no server) the fetch fails and the dock never shows,
+// so the shell's file-first behaviour is untouched. AI buttons stream a headless
+// Claude turn (POST + SSE parsed from the fetch body); mechanical buttons hit the
+// no-AI endpoints. The server does no writes — the skills inside the turn do.
+(function () {
+  const btn = document.getElementById('cockBtn');
+  const dock = document.getElementById('cockDock');
+  const out = document.getElementById('cockOut');
+  const actions = document.getElementById('cockActions');
+  const reply = document.getElementById('cockReply');
+  const replyBox = document.getElementById('cockReplyBox');
+  let session = null;      // active AI session id (for --resume follow-ups)
+  let busy = false;
+  let hasClaude = false;
+
+  fetch('api/health').then(r => r.ok ? r.json() : null).then(h => {
+    if (!h || !h.ok) return;
+    hasClaude = !!h.claude;
+    btn.classList.add('live');
+  }).catch(() => {});   // file:// or server down — stay invisible
+
+  btn.addEventListener('click', () => dock.classList.toggle('open'));
+  document.getElementById('cockClose').addEventListener('click', () => dock.classList.remove('open'));
+
+  function line(text, cls) {
+    const span = document.createElement('span');
+    if (cls) span.className = cls;
+    span.textContent = text;
+    out.appendChild(span);
+    out.scrollTop = out.scrollHeight;
+    return span;
+  }
+  function setBusy(b) {
+    busy = b;
+    actions.querySelectorAll('button').forEach(x => x.disabled = b);
+    document.getElementById('cockSend').disabled = b;
+  }
+
+  // Parse an SSE stream from a fetch Response body, dispatching per event.
+  async function pump(resp, onEvent) {
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let sep;
+      while ((sep = buf.indexOf('\n\n')) >= 0) {
+        const chunk = buf.slice(0, sep); buf = buf.slice(sep + 2);
+        let ev = 'message', data = '';
+        chunk.split('\n').forEach(l => {
+          if (l.startsWith('event:')) ev = l.slice(6).trim();
+          else if (l.startsWith('data:')) data += l.slice(5).trim();
+        });
+        if (data) { try { onEvent(ev, JSON.parse(data)); } catch (e) {} }
+      }
+    }
+  }
+
+  async function stream(url, payload) {
+    setBusy(true);
+    reply.classList.remove('on');
+    let live = null;   // the growing text node for the current reply
+    try {
+      const resp = await fetch(url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok || !resp.body) { line('\n(server error)\n', 'sys'); return; }
+      await pump(resp, (ev, d) => {
+        if (ev === 'session') { session = d.session_id; }
+        else if (ev === 'text') { if (!live) live = line('', null); live.textContent += d.text; out.scrollTop = out.scrollHeight; }
+        else if (ev === 'tool') { line('· ' + d.name + '\n', 'tool'); live = null; }
+        else if (ev === 'error') { line('\n' + (d.message || 'error') + '\n', 'sys'); }
+        else if (ev === 'done') { line('\n', null); }
+      });
+    } catch (e) {
+      line('\n(connection lost)\n', 'sys');
+    } finally {
+      setBusy(false);
+      // Quiz/review ask one thing per turn — offer the answer box to continue.
+      if (session) { reply.classList.add('on'); replyBox.focus(); }
+    }
+  }
+
+  actions.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b || busy) return;
+    if (b.dataset.mech) {
+      setBusy(true);
+      line('\n▸ ' + b.dataset.mech + '…\n', 'sys');
+      fetch('api/mechanical/' + b.dataset.mech, { method: 'POST' })
+        .then(r => r.json())
+        .then(d => line((d.output || '(no output)') + '\n', null))
+        .catch(() => line('(server error)\n', 'sys'))
+        .finally(() => setBusy(false));
+      return;
+    }
+    const action = b.dataset.action;
+    if (!hasClaude) { line('\nClaude Code CLI not found — AI actions need it on PATH.\n', 'sys'); return; }
+    let text = '';
+    if (action === 'log') text = prompt('What did you study? (one sentence)') || '';
+    else if (action === 'quiz') text = prompt('Quiz topic? (blank = let it choose)') || '';
+    else if (action === 'review') text = prompt('Review focus? (blank = what needs it)') || '';
+    if (action === 'log' && !text.trim()) return;   // log needs content
+    session = null;
+    line('\n▸ ' + action + (text ? ': ' + text : '') + '\n', 'sys');
+    stream('api/action', { action, text });
+  });
+
+  function sendReply() {
+    const text = replyBox.value.trim();
+    if (!text || busy || !session) return;
+    replyBox.value = '';
+    line('\n› ' + text + '\n', 'sys');
+    stream('api/action/reply', { session_id: session, text });
+  }
+  document.getElementById('cockSend').addEventListener('click', sendReply);
+  replyBox.addEventListener('keydown', e => { if (e.key === 'Enter') sendReply(); });
+})();
 </script>
 </body>
 </html>
