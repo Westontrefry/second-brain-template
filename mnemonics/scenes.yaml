@@ -1,0 +1,17 @@
+# Scenes — saved mnemonics. One short vivid line each (locked form:
+# text one-liners; acronyms, rhymes, absurd-image sentences all count).
+#
+# A scene is an aid, not evidence: nothing here ever touches confidence,
+# ai_confidence, or events.jsonl, and scenes never live in note bodies.
+# Written only by the /mnemonic skill, and only after the owner accepts
+# (or dictates) the line.
+#
+# Record shape:
+#   - topic: <canonical topic id, matching note frontmatter topics>
+#     line: <the mnemonic one-liner, verbatim as accepted>
+#     hook: <the specific fact it encodes, so one topic can hold several>
+#     symbols: [<vocabulary.yaml names used, if any>]
+#     origin: quiz-miss | review-miss | dictated
+#     created: <YYYY-MM-DD>
+
+scenes: []

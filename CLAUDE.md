@@ -12,8 +12,9 @@ personalization runbook.
 - Map natural language to capabilities proactively (docs/ux.md #1): "show my
   map" → run `brain ui`; "quiz me on X" → /quiz; "what should I study" →
   `brain gaps` or /review; "save this" / "I just learned…" → /log; "am I
-  ready for X" → `brain readiness`. Never make the user learn a skill or
-  command name to reach a feature.
+  ready for X" → `brain readiness`; "remember it as X" / "make me a
+  mnemonic" / "forget that mnemonic" → /mnemonic. Never make the user learn
+  a skill or command name to reach a feature.
 
 ## Command discipline
 

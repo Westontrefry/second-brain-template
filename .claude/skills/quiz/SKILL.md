@@ -21,8 +21,17 @@ verbatim, then continue. If it prints nothing, skip it and proceed.
 4. Classify each answer against the rubric, quoting the part of his answer that
    justifies the classification. Be strict: a correct-but-recited answer is level 2,
    not 3; applying it to a novel scenario is 3+.
+   Mnemonic timing (locked): if `mnemonics/scenes.yaml` holds a scene for
+   the topic, it may be shown only AFTER the answer is classified — never with or
+   before a question, or it taints the evidence. On a missed question, showing the
+   existing scene alongside the correction is the right moment.
 5. Decide the overall demonstrated level (typically the level he answered soundly at,
    not the best single flash).
+   Then, if any questions were missed: offer a mnemonic per the /mnemonic skill's
+   MINT procedure — one compact offer covering the missed facts, not one per miss.
+   Accept / edit / reject before anything is saved; save-on-accept writes
+   `mnemonics/scenes.yaml` only (never the session note, never evidence fields).
+   A rejection costs one line and the quiz moves on.
 6. Create the session note — the clickable evidence artifact, same shape as
    /debrief's (U3 quiz-artifact parity; no extra user step):
    ```
@@ -44,7 +53,8 @@ verbatim, then continue. If it prints nothing, skip it and proceed.
    (`--source quiz` tags the event so the first-touch explainer retires after this run.)
 **Finish every run (ux.md #2/#3/#6 — one command per tool call):**
 1. `.venv/bin/python -m brain ingest`, then `.venv/bin/python -m brain graph`.
-2. Snapshot: `git add` the touched notes + `events.jsonl`, then
+2. Snapshot: `git add` the touched notes + `events.jsonl` (+ `mnemonics/` if a
+   scene was accepted), then
    `git commit -m "snapshot: quiz session on <topic>"`. No git? One line:
    snapshot skipped, results still saved.
 3. End with the receipt block (docs/ux.md #2): session note id + topic +

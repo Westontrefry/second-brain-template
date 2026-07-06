@@ -15,8 +15,14 @@ verbatim, then continue. If it prints nothing, skip it and proceed.
    strong ones (they decay silently).
 2. For each topic reviewed (2–4 per session is plenty):
    - Active recall first: ask him to explain it before showing anything.
+     If `mnemonics/scenes.yaml` holds a scene for the topic, it's the recall
+     aid: offer it as the hint when he stalls, not before he tries.
    - Then fill gaps from his own notes (cite [[note-ids]]) — his words beat generic
-     explanations. Add anything genuinely new only after.
+     explanations. Add anything genuinely new only after. Restate the topic's
+     scene here (if one exists) to re-cement the hook.
+   - If recall was shaky on a specific fact: offer a mnemonic per the /mnemonic
+     skill's MINT procedure (accept / edit / reject before saving; one offer per
+     topic, never nag).
    - Record the event: `.venv/bin/python -m brain log-exposure "<topic>" --source review`
      (bumps exposure_count + last_reviewed → refreshes decay; `--source review` retires
      the first-touch explainer after this run).
@@ -26,7 +32,8 @@ verbatim, then continue. If it prints nothing, skip it and proceed.
 
 **Finish every run (ux.md #2/#3/#6 — one command per tool call):**
 1. `.venv/bin/python -m brain ingest`, then `.venv/bin/python -m brain graph`.
-2. Snapshot: `git add` the touched notes + `events.jsonl`, then
+2. Snapshot: `git add` the touched notes + `events.jsonl` (+ `mnemonics/` if a
+   scene was accepted), then
    `git commit -m "snapshot: review: <topics>"`. No git? One line: snapshot
    skipped, review still recorded.
 3. End with the receipt block (docs/ux.md #2): topics reviewed with exposure

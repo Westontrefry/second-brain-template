@@ -63,11 +63,25 @@ with quotes and writes ai_confidence via `brain assess` — the only path that s
 Every quiz also leaves a session note (`source: quiz` — questions, answers,
 classifications, same shape as /debrief's) cited as evidence in the assessment, so
 each score has a clickable artifact on the map. No extra step; it just happens.
+Missed a question? Any saved mnemonic appears with the correction (only ever after
+your answer is classified), and the AI offers to mint a new one (see /mnemonic).
 
 ## /review — spaced review (built)
 Surfaces weak-but-important topics (plus stale ones), drills them with active recall
 using your own notes, and records the event via `brain log-exposure`. Never changes
-confidence scores — it routes to /quiz for that.
+confidence scores — it routes to /quiz for that. If a topic has a saved mnemonic,
+it's the recall aid: offered as the hint when you stall, restated after recall.
+
+## /mnemonic — memory hooks (built)
+Short one-liner mnemonics, minted from a personal vocabulary of characters and
+places (`mnemonics/vocabulary.yaml` — ships a public-domain starter cast; anything
+you add is `pack: personal` and never leaves your machine). Nothing saves without
+your accept: on a missed quiz/review answer the AI offers one (accept / edit /
+reject), or you dictate your own anytime ("remember it as…"). "Forget that
+mnemonic" removes it. Scenes live in `mnemonics/scenes.yaml` only — never in note
+bodies — and surface only in /review and in /quiz after an answer is classified
+(never before, so evidence stays untainted). Aids, not evidence: mnemonics never
+touch confidence, ai_confidence, or events.
 
 ## /interview-pack — verbal mock interview brief (built)
 Generates a copy-paste block for a Claude voice-mode session: targeted questions at

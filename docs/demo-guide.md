@@ -120,6 +120,18 @@ session, then records that you reviewed them.
 
 Then glance at the map. The moment a dot turns green is the whole point.
 
+### Let it help you actually remember
+Miss a quiz or review question and it offers you a memory hook — one vivid
+line built from characters you already know ("Sisyphus is your infinite
+loop: no exit condition, boulder forever"). You accept it, reword it, or
+wave it off; nothing gets saved without your say-so. You can also just tell
+it one anytime: "remember binary search as splitting the phone book." Saved
+hooks come back as hints in your reviews, and in quizzes only *after*
+you've answered — they help you remember, they never inflate your score.
+It ships with a starter cast (Zeus, Sherlock, Dracula, Alice…), and any
+characters or places you add from your own head stay private on your
+machine, like everything else.
+
 ---
 
 ## Bring in your old notes

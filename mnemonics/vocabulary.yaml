@@ -1,0 +1,125 @@
+# Mnemonic vocabulary — the cast of characters and places mnemonics draw on.
+#
+# Each symbol carries global associations (flavors) that get borrowed for
+# task-specific scenes: a memorable global association makes the new
+# connection stickier. `used_for` is the usage ledger — topics whose saved
+# scenes borrowed this symbol (kept current by the /mnemonic skill so fresh
+# mints can prefer less-worn symbols).
+#
+# pack values:
+#   starter  — the shipped set. PUBLIC-DOMAIN FIGURES ONLY (mythology,
+#              folklore, pre-1929 literature). Text names only, never
+#              imagery. No franchise IP, no real people. This rule is
+#              locked.
+#   personal — entries the owner added. Private by definition: never shared
+#              anywhere, never displayed outside this machine. Any
+#              character, place, or media you know cold is fair game
+#              here — that is the legally-clean door for franchise figures.
+#
+# Managed by the /mnemonic skill. Hand-editing is fine; keep the shape.
+
+symbols:
+  - name: Zeus
+    pack: starter
+    flavors: [authority, the top of a hierarchy, lightning-fast, strikes from above]
+    used_for: []
+  - name: Atlas
+    pack: starter
+    flavors: [holding everything up, load-bearing, infrastructure, heavy burden]
+    used_for: []
+  - name: Sisyphus
+    pack: starter
+    flavors: [endless repetition, loops, restarting from the bottom, never terminating]
+    used_for: []
+  - name: Icarus
+    pack: starter
+    flavors: [overreach, ignoring limits, crashing after flying too high]
+    used_for: []
+  - name: Medusa
+    pack: starter
+    flavors: [freezing things solid, one look locks it, immutability, dangerous to inspect directly]
+    used_for: []
+  - name: Hercules
+    pack: starter
+    flavors: [brute force, a long checklist of labors, raw strength over cleverness]
+    used_for: []
+  - name: Loki
+    pack: starter
+    flavors: [trickery, shape-shifting, edge cases, the input that breaks your assumptions]
+    used_for: []
+  - name: Athena
+    pack: starter
+    flavors: [strategy, planning before acting, springing out fully formed]
+    used_for: []
+  - name: Poseidon
+    pack: starter
+    flavors: [floods, streams, everything flowing, pressure from below]
+    used_for: []
+  - name: King Midas
+    pack: starter
+    flavors: [everything he touches becomes one thing, type coercion, a gift that is a curse]
+    used_for: []
+  - name: Odysseus
+    pack: starter
+    flavors: [the long way home, routing, detours, clever escapes under a false name]
+    used_for: []
+  - name: Ariadne
+    pack: starter
+    flavors: [a thread through the maze, backtracking safely, pointers back to where you came from]
+    used_for: []
+  - name: Sherlock Holmes
+    pack: starter
+    flavors: [deduction, searching, eliminating the impossible, noticing the one detail that matters]
+    used_for: []
+  - name: Dracula
+    pack: starter
+    flavors: [draining slowly, leaks, only comes out under specific conditions, must be invited in]
+    used_for: []
+  - name: Frankenstein's monster
+    pack: starter
+    flavors: [assembled from parts, composition, the pieces work but the whole surprises you]
+    used_for: []
+  - name: Merlin
+    pack: starter
+    flavors: [transformation, hidden knowledge, appearing exactly when needed]
+    used_for: []
+  - name: Alice
+    pack: starter
+    flavors: [changing scale, going down the rabbit hole, recursion, rules that differ at every level]
+    used_for: []
+  - name: Don Quixote
+    pack: starter
+    flavors: [fighting imaginary problems, misreading what things are, premature optimization]
+    used_for: []
+  - name: Robin Hood
+    pack: starter
+    flavors: [redistribution, rebalancing, taking from the rich nodes to feed the poor ones]
+    used_for: []
+  - name: Cinderella
+    pack: starter
+    flavors: [deadlines, everything reverts at midnight, expiry, a perfect fit that identifies one match]
+    used_for: []
+  - name: Mount Olympus
+    pack: starter
+    flavors: [the root, the highest level, where the privileged things live]
+    used_for: []
+  - name: the Labyrinth
+    pack: starter
+    flavors: [mazes, graph traversal, easy to enter and hard to exit, something waiting in the middle]
+    used_for: []
+  - name: Wonderland
+    pack: starter
+    flavors: [a place where normal rules break, undefined behavior, arbitrary depth]
+    used_for: []
+  - name: Camelot
+    pack: starter
+    flavors: [a round table of equals, peer-to-peer, an ideal system that depends on trust]
+    used_for: []
+  - name: Atlantis
+    pack: starter
+    flavors: [lost beneath the surface, deprecated, legendary but unreachable]
+    used_for: []
+  - name: Troy
+    pack: starter
+    flavors: [walls that hold until something is carried inside, injection, trusting the payload]
+    used_for: []
