@@ -439,6 +439,49 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_frontier_add(args: argparse.Namespace) -> int:
+    import json
+
+    from .frontier import Proposed, add_topics
+
+    try:
+        raw = json.loads(Path(args.spec).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        print(f"could not read spec: {e}")
+        return 1
+    if not isinstance(raw, list):
+        print("spec must be a JSON list of topic objects")
+        return 1
+    try:
+        proposed = [Proposed(id=t["id"], name=t["name"],
+                             required_level=int(t.get("required_level", 2)),
+                             prereqs=list(t.get("prereqs", [])),
+                             aliases=list(t.get("aliases", []))) for t in raw]
+    except (KeyError, TypeError) as e:
+        print(f"malformed topic in spec: {e}")
+        return 1
+
+    try:
+        result = add_topics(args.goal, proposed, max_add=args.max)
+    except ValueError as e:
+        print(e)
+        return 1
+
+    for p in result.added:
+        print(f"  added: {p.id} ({p.name}) — required_level {p.required_level}")
+    for pid, alias, concept in result.dropped_aliases:
+        print(f"  dropped alias '{alias}' from {pid} (belongs to concept '{concept}')")
+    for pid, reason in result.skipped:
+        print(f"  skipped: {pid} — {reason}")
+    if result.added:
+        print(f"appended {len(result.added)} topic(s) to {result.roadmap_path}; "
+              f"registry re-synced, graph rebuilt. "
+              f"{result.dashed_total} dashed frontier nodes now on the map.")
+    else:
+        print("nothing added.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     cfg = load_config()
     parser = argparse.ArgumentParser(prog="brain", description="Second Brain CLI")
@@ -540,6 +583,18 @@ def build_parser() -> argparse.ArgumentParser:
     mp.set_defaults(func=cmd_model_import)
     mp = msub.add_parser("build", help="compile the model and print a summary")
     mp.set_defaults(func=cmd_model_build)
+
+    p = sub.add_parser("frontier",
+                       help="expand a goal's roadmap with proposed frontier topics "
+                            "(guarded: dedup, alias-collision, governor cap)")
+    frsub = p.add_subparsers(dest="frontier_command", required=True)
+    frp = frsub.add_parser("add", help="append confirmed frontier topics from a JSON spec")
+    frp.add_argument("--goal", required=True, help="goal id whose roadmap to expand")
+    frp.add_argument("--spec", required=True,
+                     help="JSON file: list of {id, name, required_level, prereqs, aliases}")
+    frp.add_argument("--max", type=int, default=8,
+                     help="governor: max topics to add per call (default 8)")
+    frp.set_defaults(func=cmd_frontier_add)
 
     p = sub.add_parser("readiness",
                        help="explainable per-concept readiness for a track or goal "

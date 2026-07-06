@@ -63,6 +63,11 @@ def _action_prompt(action: str, text: str) -> str:
         return f"Quiz me on {text}." if text else "Quiz me at the edge of my evidence."
     if action == "review":
         return f"Run a review session on {text}." if text else "Run a review session."
+    if action == "expand":
+        # Fires the /frontier skill on the clicked node — proposes related topics
+        # OUTSIDE current coverage (unknown unknowns) and adds confirmed ones.
+        return (f"Run /frontier to expand the knowledge frontier around '{text}'."
+                if text else "Run /frontier to expand my knowledge frontier.")
     raise ValueError(f"unknown AI action: {action!r}")
 
 

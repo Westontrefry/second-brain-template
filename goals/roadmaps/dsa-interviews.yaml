@@ -91,4 +91,106 @@ topics:
     name: System design fundamentals (new-grad level)
     required_level: 3
     prereqs: [databases]
-    aliases: [system design, scalability, caching]
+    aliases: [system design, scalability]
+
+  # --- DSA patterns frontier: interview patterns beyond the core canon.
+  #     These render dashed until you have notes on them (example of what
+  #     the /frontier feature adds). required_level mirrors the canon.
+  - id: union-find
+    name: Union-Find / Disjoint Set
+    required_level: 4
+    prereqs: [graphs]
+    aliases: [union find, disjoint set, dsu, connected components]
+
+  - id: tries
+    name: Tries (prefix trees)
+    required_level: 3
+    prereqs: [trees]
+    aliases: [trie, prefix tree, prefix trees]
+
+  - id: greedy
+    name: Greedy algorithms
+    required_level: 4
+    prereqs: [sorting]
+    aliases: [greedy algorithms, exchange argument]
+
+  - id: bit-manipulation
+    name: Bit manipulation
+    required_level: 3
+    prereqs: [big-o]
+    aliases: [bit manipulation, bitmask, bitwise tricks, xor tricks]
+
+  - id: intervals
+    name: Intervals (merge / overlap)
+    required_level: 3
+    prereqs: [sorting]
+    aliases: [intervals, merge intervals, interval scheduling, sweep line]
+
+  - id: prefix-sums
+    name: Prefix sums and difference arrays
+    required_level: 3
+    prereqs: [arrays-strings]
+    aliases: [prefix sum, prefix sums, difference array, cumulative sum]
+
+  - id: ood-lld
+    name: Object-oriented / low-level design
+    required_level: 3
+    prereqs: []
+    aliases: [object-oriented design, low level design, lld, design patterns, solid principles]
+
+  # --- System design frontier: expands the single system-design node into a
+  #     new-grad concept cluster. required_level 2 (comprehension) — new-grad
+  #     loops test breadth, not depth.
+  - id: caching
+    name: Caching strategies
+    required_level: 2
+    prereqs: [system-design-basics]
+    aliases: [caching, cache, ttl, cache eviction, write-through, redis, memcached]
+
+  - id: load-balancing-sd
+    name: Load balancing (system design)
+    required_level: 2
+    prereqs: [system-design-basics]
+    aliases: [load balancing concepts, reverse proxy, round robin, health checks]
+
+  - id: sharding-replication
+    name: Database sharding and replication
+    required_level: 2
+    prereqs: [system-design-basics]
+    aliases: [sharding, replication, partitioning, read replicas, leader-follower]
+
+  - id: message-queues
+    name: Message queues and async processing
+    required_level: 2
+    prereqs: [system-design-basics]
+    aliases: [message queue, message queues, pub sub, kafka, rabbitmq, event driven]
+
+  - id: cap-consistency
+    name: Consistency models and CAP
+    required_level: 2
+    prereqs: [system-design-basics]
+    aliases: [cap theorem, consistency models, eventual consistency, acid, base]
+
+  - id: api-design
+    name: API design (REST / gRPC)
+    required_level: 2
+    prereqs: [system-design-basics]
+    aliases: [api design, rest api, grpc, idempotency, pagination]
+
+  - id: rate-limiting
+    name: Rate limiting
+    required_level: 2
+    prereqs: [system-design-basics]
+    aliases: [rate limiting, token bucket, leaky bucket, throttling]
+
+  - id: cdn-edge
+    name: CDN and edge delivery
+    required_level: 2
+    prereqs: [caching]
+    aliases: [cdn, content delivery network, edge caching]
+
+  - id: microservices
+    name: Microservices vs monolith
+    required_level: 2
+    prereqs: [system-design-basics]
+    aliases: [microservices, monolith, service oriented architecture, service mesh]

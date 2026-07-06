@@ -2,8 +2,7 @@
 # Structured from the CDL exam guide content areas (conceptual cert — verify the
 # current section list against the official exam guide before relying on weights).
 # required_level 2 = comprehension per rubrics/depth.yaml: CDL is a multiple-choice
-# conceptual exam, not hands-on. aliases are keyed to the note vocabulary that came
-# out of the Joplin import (Business/Skills CDL + Google AI Essentials material).
+# conceptual exam, not hands-on. aliases are keyed to typical CDL note vocabulary.
 
 goal: gcp-cdl
 topics:

@@ -76,3 +76,36 @@ topics:
     required_level: 2
     prereqs: [compute-engine]
     aliases: [cloud monitoring, cloud logging, observability]
+
+  # --- ACE frontier corners: exam areas the base roadmap doesn't cover.
+  #     These render dashed until you have notes (example /frontier output).
+  #     IaC/Terraform is intentionally left folded into `deployment` above.
+  - id: secret-kms
+    name: Secret Manager and Cloud KMS
+    required_level: 2
+    prereqs: [iam]
+    aliases: [secret manager, cloud kms, key management, encryption keys, secrets]
+
+  - id: ci-cd
+    name: Cloud Build / CI-CD / Artifact Registry
+    required_level: 2
+    prereqs: [gcloud-cli]
+    aliases: [cloud build, ci cd, cicd, artifact registry, container registry, continuous integration]
+
+  - id: hybrid-connectivity
+    name: Hybrid connectivity (VPN, Interconnect)
+    required_level: 2
+    prereqs: [vpc-networking]
+    aliases: [cloud vpn, cloud interconnect, hybrid connectivity, peering, dedicated interconnect]
+
+  - id: cloud-armor
+    name: Cloud Armor and org policy
+    required_level: 2
+    prereqs: [iam, vpc-networking]
+    aliases: [cloud armor, organization policy, org policy, waf, security policies]
+
+  - id: budgets-quotas
+    name: Budgets, quotas, and billing exports
+    required_level: 2
+    prereqs: [resource-hierarchy]
+    aliases: [budgets, quotas, billing export, cost alerts, billing account]
