@@ -1,0 +1,40 @@
+name: CI
+
+# Runs on every push and PR. The `sanitize` job is the guard that this PUBLIC
+# template never grows personal data or upstream-only artifacts — it needs no
+# dependencies, so it can't flake and always runs. `test` runs the fast suite.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  sanitize:
+    name: Sanitization gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so the check can see everything tracked
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check for personal data / upstream-only artifacts
+        run: python scripts/check_sanitization.py
+
+  test:
+    name: Fast test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[cockpit]"
+          pip install -r requirements-dev.txt
+      - name: Run tests (no real embeddings)
+        run: pytest -m "not e2e" -q

@@ -237,9 +237,11 @@ The other buttons (Ingest, Graph, Gaps, Status, Doctor) are the plumbing
 commands, run for you with one click.
 
 Even easier, you rarely have to name a topic at all. Click any dot on the map
-and its card grows its own Quiz, Review, and Log buttons. Hit Quiz there and it
+and its card grows its own Quiz, Review, Log, and Expand buttons. Hit Quiz there and it
 quizzes you on that exact topic right away, with nothing to type. Log there and
-it starts the note for you with the topic already filled in. And when you do
+it starts the note for you with the topic already filled in. Expand asks the AI
+what related topics you don't have yet and drops them onto the map as dashed
+"to-learn" circles. And when you do
 kick off a quiz or review from the dock itself, it no longer makes you guess a
 topic into a blank box. It suggests your real topics as you type, so you just
 pick one and go.

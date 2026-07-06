@@ -689,7 +689,8 @@ function drill(id, push) {
   const actHtml = (window.cockpit && window.cockpit.live) ? `<div class="nodeAct">
     <button data-act="quiz" title="quiz me on this topic">Quiz</button>
     <button data-act="review" title="review this topic">Review</button>
-    <button data-act="log" title="log a note on this topic">Log</button></div>` : '';
+    <button data-act="log" title="log a note on this topic">Log</button>
+    <button data-act="expand" title="find related topics you don't have yet">Expand</button></div>` : '';
   panel.innerHTML = `
     <button id="closeBtn" title="close">✕</button>
     <div id="crumbs">${crumbHtml}</div>

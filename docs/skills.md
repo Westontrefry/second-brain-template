@@ -100,6 +100,12 @@ your knowledge + roadmaps into `ui/paths/<slug>.json` — ordered nodes with str
 statuses plus a suggestions array — which the UI renders as a highlighted route with
 the suggestions tab alongside.
 
+## /frontier — expand the map beyond the known radius (built)
+Proposes relevant topics OUTSIDE your current coverage (the unknown unknowns) and,
+once you confirm, appends them to a roadmap as dashed nodes via `brain frontier add`.
+Two modes: deepen (sub-topics of a node) and broaden (adjacent siblings the map
+hasn't touched). Also the engine behind the cockpit's per-node Expand button.
+
 ## /context — learning-state export (built)
 Wraps `brain context`: a one-screen YAML summary of tracks, readiness, and top
 gaps, ready to paste into any AI assistant. Scope with a track or goal

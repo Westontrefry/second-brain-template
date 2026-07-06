@@ -104,9 +104,11 @@ drives your skills. `brain cockpit [--host 127.0.0.1] [--port 8765]`
   Graph / Gaps / Status / Doctor run in-process with no AI.
 - Topic selection is guided, not free-typed: the dock's Quiz/Review composer
   autocompletes from your real topic names (blank still = let it choose), and
-  clicking a node on the map adds Quiz / Review / Log buttons to its detail card
-  that act on that topic directly — Quiz/Review fire at once, Log seeds the note
-  with the topic. Those per-node buttons appear only when the cockpit is live.
+  clicking a node on the map adds Quiz / Review / Log / Expand buttons to its
+  detail card that act on that topic directly — Quiz/Review/Expand fire at once
+  (Expand runs the /frontier skill to propose related topics you don't have yet),
+  Log seeds the note with the topic. Those per-node buttons appear only when the
+  cockpit is live.
 - The server never writes knowledge, events, or scores itself — every write goes
   through a skill inside the headless session, the same sanctioned path as chat.
 - localhost, single user. The headless turn runs with bypassPermissions so it
@@ -134,6 +136,17 @@ Compile the model (registry + tracks + learning state) and print a summary:
 concepts/edges/tracks, per-state counts (mastered / learning / weak / stale /
 missing — thresholds in config.yaml `model.state`), coverage vs the knowledge
 base, and the most-converged concepts (touched by multiple tracks).
+
+## frontier add
+Append confirmed frontier topics (the "unknown unknowns" the /frontier skill
+proposes) to a goal's roadmap, then re-sync the registry and rebuild the graph
+so they render as dashed nodes. `brain frontier add --goal <goal> --spec <topics.json>`
+- `--spec` is a JSON list of `{id, name, required_level, prereqs, aliases}`.
+- Guards: skips ids already in the roadmap (dedup), skips an id that resolves to
+  an existing concept (collision), drops an alias that belongs to another concept
+  (so the new node can't silently un-dash onto existing evidence), and caps
+  additions per call with `--max` (default 8). The /frontier skill does the
+  reasoning; this command does the guarded write.
 
 ## readiness
 Explainable per-concept readiness for any track or goal. `brain readiness gcp-cdl`

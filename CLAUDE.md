@@ -13,8 +13,9 @@ personalization runbook.
   map" → run `brain ui`; "quiz me on X" → /quiz; "what should I study" →
   `brain gaps` or /review; "save this" / "I just learned…" → /log; "am I
   ready for X" → `brain readiness`; "remember it as X" / "make me a
-  mnemonic" / "forget that mnemonic" → /mnemonic. Never make the user learn
-  a skill or command name to reach a feature.
+  mnemonic" / "forget that mnemonic" → /mnemonic; "what don't I know about X" /
+  "expand the frontier on X" / "grow the map around X" → /frontier. Never make
+  the user learn a skill or command name to reach a feature.
 
 ## Command discipline
 
