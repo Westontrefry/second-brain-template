@@ -140,6 +140,7 @@ async def _stream_claude(prompt: str, resume: str | None, issued: set[str]):
     session_id: str | None = None
     streamed = ""   # what we've already sent for the current assistant message
     result_text = ""
+    assert proc.stdout is not None and proc.stderr is not None  # PIPE-configured below
     try:
         async for raw in proc.stdout:
             line = raw.decode("utf-8", "replace").strip()

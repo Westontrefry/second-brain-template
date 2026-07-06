@@ -35,7 +35,8 @@ def search(
         "SELECT c.text, c.embedding, n.id, n.path, n.domain, n.topics, n.goals,"
         " n.confidence FROM chunks c JOIN notes n ON n.id = c.note_id"
     )
-    conds, params = [], []
+    conds: list[str] = []
+    params: list = []  # heterogeneous SQL bind values (str filters, numeric threshold)
     if domain:
         conds.append("n.domain = ?")
         params.append(domain)

@@ -14,7 +14,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import re
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 from .config import knowledge_dir, load_config, root
@@ -211,23 +211,23 @@ def build(today: dt.date | None = None) -> dict:
             src, dst = model.resolve_ref(e.source), model.resolve_ref(e.target)
             if e.kind == "prereq" and src in resolved and dst in resolved:
                 add_edge(resolved[src], resolved[dst], "prereq", 1.5 * e.confidence)
-        gaps_lines = [l for l in readiness(track.track, model=model).lines
-                      if l.state not in READY_STATES]
+        gaps_lines = [gl for gl in readiness(track.track, model=model).lines
+                      if gl.state not in READY_STATES]
         suggestions[track.track] = [
-            {"nodeId": resolved.get(l.concept, l.concept), "name": l.name,
-             "action": TRACK_ACTIONS.get(l.state, l.state),
-             "score": len(gaps_lines) - i, "blockedBy": l.blocked_by}
-            for i, l in enumerate(gaps_lines)
+            {"nodeId": resolved.get(gl.concept, gl.concept), "name": gl.name,
+             "action": TRACK_ACTIONS.get(gl.state, gl.state),
+             "score": len(gaps_lines) - i, "blockedBy": gl.blocked_by}
+            for i, gl in enumerate(gaps_lines)
         ]
 
     for cid, cs in model.concepts.items():
         if cs.convergence == 0:
             continue
         for key in slug_keys(cid, aliases.get(cid, [])):
-            topic = slug_to_topic.get(key)
-            if topic in nodes:
-                nodes[topic]["convergence"] = max(nodes[topic].get("convergence", 0),
-                                                  cs.convergence)
+            mapped = slug_to_topic.get(key)
+            if mapped is not None and mapped in nodes:
+                nodes[mapped]["convergence"] = max(nodes[mapped].get("convergence", 0),
+                                                   cs.convergence)
         if cid in nodes:  # missing nodes are keyed by concept id
             nodes[cid]["convergence"] = cs.convergence
 
@@ -257,8 +257,10 @@ def _load_reference() -> dict:
     from .cli import build_parser
     from .importer import _split_frontmatter
 
-    sub = build_parser()._subparsers._group_actions[0]
-    cli = [{"name": a.dest, "description": a.help or ""} for a in sub._choices_actions]
+    # Reaches into argparse internals (untyped private attrs) to enumerate the
+    # subcommands the parser knows about.
+    sub = build_parser()._subparsers._group_actions[0]  # type: ignore[union-attr]
+    cli = [{"name": a.dest, "description": a.help or ""} for a in sub._choices_actions]  # type: ignore[union-attr]
 
     skills = []
     skills_dir = root() / ".claude" / "skills"

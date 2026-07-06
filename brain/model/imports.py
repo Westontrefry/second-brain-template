@@ -100,7 +100,9 @@ def import_resource(path: Path, adapter: str | None = None, slug: str | None = N
         # within units; prereq edges between consecutive units (order-based).
         for u in extra["units"]:
             ids = [registry.resolve(t) for t in u.terms]
-            track.units.append(Unit(u.name, list(dict.fromkeys(ids))))
+            # resolve() is typed Optional, but every term here was just added to
+            # the registry above, so all resolve; fromkeys dedupes preserving order.
+            track.units.append(Unit(u.name, list(dict.fromkeys(ids))))  # type: ignore[arg-type]
         seen: set[tuple[str, str]] = set()
         for prev, unit in zip(track.units, track.units[1:]):
             for a in prev.concepts:
@@ -112,7 +114,7 @@ def import_resource(path: Path, adapter: str | None = None, slug: str | None = N
 
     errors = validate_track(yaml.safe_load(track_to_yaml(track)), registry)
     if errors:  # adapter bug, not user error — fail loudly
-        raise ValueError(f"adapter produced an invalid track:\n" +
+        raise ValueError("adapter produced an invalid track:\n" +
                          "\n".join(f"  - {e}" for e in errors))
 
     track_path = tracks_dir() / f"{track.track}.yaml"

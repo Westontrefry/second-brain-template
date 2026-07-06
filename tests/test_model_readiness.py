@@ -22,7 +22,7 @@ def test_every_line_self_explains(sandbox):
 
 def test_blocked_concepts_show_their_prereq(sandbox):
     report = readiness("dsa-interviews", today=TODAY)
-    trees = next(l for l in report.lines if l.concept == "trees")
+    trees = next(ln for ln in report.lines if ln.concept == "trees")
     assert "recursion-backtracking" in trees.blocked_by  # matches gaps.py blocking
     assert "first: recursion-backtracking" in trees.because
 
@@ -42,14 +42,14 @@ def test_ready_track_exits_clean(sandbox):
     import_resource(FIXTURE, slug="adv-ds")
     report = readiness("adv-ds", today=TODAY)
     assert report.ready
-    assert all(l.state in ("mastered", "learning") for l in report.lines)
-    assert all(not l.blocked_by for l in report.lines)
+    assert all(ln.state in ("mastered", "learning") for ln in report.lines)
+    assert all(not ln.blocked_by for ln in report.lines)
 
 
 def test_imported_track_readiness_uses_canonical_ids(sandbox):
     import_resource(FIXTURE, slug="adv-ds")
     report = readiness("adv-ds", today=TODAY)
-    ids = [l.concept for l in report.lines]
+    ids = [ln.concept for ln in report.lines]
     assert "hash-maps" in ids and "trees" in ids     # aliases canonicalized
     assert len(ids) == len(set(ids))                 # trees appears once, not per unit
 

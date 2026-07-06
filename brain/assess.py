@@ -58,6 +58,7 @@ def assess(topic: str, level: float, rationale: str, evidence_ids: list[str],
     for note_id in evidence_ids:
         path = _find_note(note_id)
         note, _ = parse_note(path)
+        assert note is not None  # _find_note returned a path that parses
         if topic not in note.meta["topics"]:
             raise ValueError(f"note {note_id} does not carry topic {topic!r}")
         paths.append(path)

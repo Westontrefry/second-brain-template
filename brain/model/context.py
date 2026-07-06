@@ -87,7 +87,7 @@ def build_context(track: str | None = None, goal: str | None = None,
                 gaps.append({"concept": q[i].concept, "track": slug, "because": q[i].because})
     dropped = max(len(gaps) - MAX_GAPS, 0)
 
-    out = {
+    out: dict[str, object] = {
         "generated": today.isoformat(),
         "tracks": tracks_out,
         "concepts": {s: by_state[s] for s in

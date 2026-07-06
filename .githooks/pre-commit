@@ -1,0 +1,14 @@
+#!/bin/sh
+# Refuse commits made directly on the primary branch. Real work belongs on a
+# branch that lands via PR, where CI (sanitization, tests, lint, typecheck,
+# scanners) runs before it reaches main.
+#
+# Enable in your clone:   git config core.hooksPath .githooks
+# Escape hatch (merges, the very first commit, etc.):
+#     ALLOW_MAIN=1 git commit ...
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if [ "$branch" = "main" ] && [ "${ALLOW_MAIN:-0}" != "1" ]; then
+  echo "✋ Refusing to commit directly on 'main'." >&2
+  echo "   Branch first (git switch -c my-change), or set ALLOW_MAIN=1 for merges." >&2
+  exit 1
+fi
