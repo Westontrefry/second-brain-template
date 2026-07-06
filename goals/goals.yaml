@@ -1,7 +1,9 @@
 # Your goals. Each goal's id is referenced by notes (frontmatter `goals:`) and
 # by roadmap files in goals/roadmaps/<id>.yaml. Priority: 1 (low) to 5 (highest).
 # Replace these examples with your real goals — your AI assistant can do this
-# with you interactively (see AI-SETUP.md).
+# with you interactively (see AI-SETUP.md, or just run the /start tour).
+# More shipped roadmaps live in goals/roadmaps/ (gcp-cdl, gcp-ace) — the tour
+# offers them as picks and adds a goal entry here when you choose one.
 
 goals:
   - id: example-cert
@@ -10,8 +12,12 @@ goals:
     deadline: 2027-01-01
     description: Replace with a real cert or exam you are working toward.
 
-  - id: example-interviews
-    title: Example interview-prep goal
+  - id: dsa-interviews
+    title: DSA / SWE interview prep
     priority: 5
     deadline: null
-    description: Replace with your target role or interview loop.
+    description: >
+      Fluency under pressure (rubric level 4) on the interview canon: arrays,
+      strings, hash maps, two pointers, trees, graphs, heaps, dynamic
+      programming, plus system design fundamentals. (Also what the demo pack's
+      example notes point at, so readiness/gaps demo out of the box.)

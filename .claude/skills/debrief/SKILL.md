@@ -7,6 +7,10 @@ description: Ingest a mock-interview debrief (from /interview-pack voice session
 
 Input: the interviewer's `=== DEBRIEF ===` block (preferred) or the user's own account.
 
+**First-touch (run this first):** `.venv/bin/python -m brain first-touch debrief`. If it
+prints a paragraph, this is the user's first debrief — open your reply with that text
+verbatim, then continue. If it prints nothing, skip it and proceed.
+
 1. Sanity-check before trusting it: levels must be plausible against the rubric and
    the justifications must contain actual quoted answers. If a claimed level has no
    supporting quote, downgrade to what the quote supports and say so. Map topic names
@@ -23,10 +27,20 @@ Input: the interviewer's `=== DEBRIEF ===` block (preferred) or the user's own a
    ```
    .venv/bin/python -m brain assess "<topic>" --level <demonstrated_level> \
      --rationale "verbal mock interview <date>: <quoted justification>" \
-     --evidence <session-note-id>[,<existing-note-ids>]
+     --evidence <session-note-id>[,<existing-note-ids>] --source debrief
    ```
-4. `brain graph`, then summarize: levels recorded, divergences vs his self-ratings,
-   weak spots worth a /log or targeted /review, and whether the active pathway
-   overlay should be regenerated (/path) to reflect new statuses.
-5. Verbal-under-pressure is prime level-4 evidence — but never exceed what the
+   (`--source debrief` keeps this distinct from a /quiz event, so each keeps its own
+   first-touch. The session note's own `--source quiz` above is unrelated to this tag.)
+4. Verbal-under-pressure is prime level-4 evidence — but never exceed what the
    quotes support.
+
+**Finish every run (ux.md #2/#3/#6 — one command per tool call):**
+1. `.venv/bin/python -m brain ingest`, then `.venv/bin/python -m brain graph`.
+2. Snapshot: `git add` the session note + touched notes + `events.jsonl`, then
+   `git commit -m "snapshot: debrief: <focus> <date>"`. No git? One line:
+   snapshot skipped, results still saved.
+3. End with the receipt block (docs/ux.md #2): session note id; per-topic
+   levels recorded (claimed vs proven, divergences called out); weak spots
+   worth a /log or /review, and whether the pathway overlay needs a /path
+   rerun; "map data refreshed — reload the tab"; "saved a local snapshot —
+   nothing leaves your machine"; next action.

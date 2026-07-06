@@ -1,0 +1,24 @@
+# Packaging only — the CLI stays stdlib argparse (locked decision 5, PLAN-UX).
+# `pip install -e .` gives the `brain` console script; python -m brain still works.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "second-brain"
+version = "0.1.0"
+description = "Personal AI learning/career memory: markdown notes, evidence-weighted knowledge model, local semantic search"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+    "sentence-transformers>=3.0",
+    "numpy>=1.26",
+]
+
+[project.scripts]
+brain = "brain.cli:main"
+
+# Only the brain package installs; knowledge/, ui/, goals/, model/ etc. are
+# repo data the code finds via config.root(), not package data.
+[tool.setuptools]
+packages = ["brain", "brain.model"]

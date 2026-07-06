@@ -26,185 +26,274 @@ Three things make it different from a notes app:
 3. **Everything stays on your machine.** Your notes are ordinary files in a
    folder. Nothing is uploaded anywhere. It costs $0 to run.
 
+## Getting started
+
+Three commands, then a conversation (the README has the copy-paste versions):
+clone it, install it, open the folder in Claude Code, and say hi.
+
+If your brain is empty, it offers a short guided tour (/start). No setup
+quiz, no forms — one conversation:
+
+1. Pick what you're working toward (it suggests the built-in goal roadmaps,
+   or takes your own words).
+2. Tell it one sentence about anything you studied this week — that becomes
+   your first note.
+3. Answer two quick questions about that same thing — that becomes your first
+   real score.
+4. It opens your map and points at what just happened: your dot, its size,
+   its color, and the dashed circles your goal still wants filled.
+
+Every step is skippable. If you already have years of notes in Joplin or
+Obsidian, say so at the start and it walks you through importing them instead.
+If you have nothing to import, it can drop in the demo examples first
+(`brain demo --install`) so the map isn't an empty void on day one — they're
+clearly marked, never get scored, and `brain demo --remove` deletes them
+without a trace.
+
 ## The two ways you use it
 
 - **Talk to it** — you open the folder in Claude Code (an AI assistant that
   runs in a window on your computer) and just… tell it things or ask it
-  things. The commands below that start with a `/` are typed into that chat.
-- **Look at it** — one command opens the visual side: your knowledge map and
-  dashboard, in your web browser.
+  things. You never need to memorize commands: "show my map", "quiz me on
+  graphs", and "what should I study?" all just work. The `/` shortcuts below
+  are there when you want to be exact.
+- **Look at it** — your knowledge map and dashboard, in your web browser.
+
+And if you ever type just `brain` in a terminal, you get a little home screen:
+how many notes and topics you have, whether anything needs a re-sync, a
+"since last time" recap (what you added, what you proved, what quietly went
+stale while you weren't looking), the top three gaps worth your attention,
+and three things you could try right now.
+
+One nice touch as you explore: the first time you try a feature — your first
+quiz, your first import, your first review — it opens with a short plain-English
+explanation of what's about to happen and what the numbers mean. You see it
+once, and after that the feature just runs. The visual side works the same way:
+your first visit to each view dims the page for a moment and points right at
+the thing it's explaining (the color legend, the chart) with a short note.
+Click "got it" and it never appears again — and the little `?` next to a
+view's title brings it back whenever you want a refresher. No manual required.
 
 ---
 
-## Capability tour
+## The daily loop
 
-### 1. See your knowledge map
-**What it is:** every topic you've ever taken a note on, drawn as a dot.
-Bigger dot = more of your knowledge lives there. Green = strong, orange =
-weak, dashed outline = something your goals need that you haven't touched yet.
-Lines connect topics that show up together.
+The whole habit is three small moves. Everything else is optional.
 
-**How:** in the chat, type:
-```
-python -m brain ui
-```
-Your browser opens the map. Click any dot to zoom into its neighborhood and
-see the actual notes behind it (a filter box appears when the list is long) —
-and **click any note in that list to read it right there**, nicely formatted —
-math equations, flowchart diagrams, and color-highlighted code all render
-properly — without leaving the map. Use the
-**Goal** dropdown to show only what matters for one goal, and tick
-**show gaps** to light up what's missing. Prefer dark mode? Hit the 🌙 button
-in the header — it remembers your choice and follows you to the dashboard.
+### Save something you just learned
+Studied something? Struggled with something? Tell it in one sentence — it
+files a proper note for you.
 
-### 2. Check the dashboard
-**What it is:** click **dashboard →** in the map's header. Three pictures:
-
-- **Readiness radar** — one glance answers *"am I ready for this goal?"* The
-  green shape is what you know; the dashed outline is what the goal requires.
-  Wherever green fills the outline, you're ready. Dents = study there.
-- **Confidence divergence** — a dot for each topic that's been quiz-tested,
-  comparing how confident you *felt* vs how you *performed*. Dots below the
-  line = overconfident (feelings ahead of evidence). Above = you're better
-  than you think.
-- **Knowledge real estate** — every topic as a box; bigger box = more of your
-  knowledge lives there, grouped and color-coded by area. Hover any box for
-  its exact share. Great for spotting "wait, why is THAT taking up so much
-  room?" moments. **Click any box** (or any dot on the divergence chart) and
-  it jumps you to that topic in the map with its full summary open — the
-  notes behind it, its scores, what goals need it.
-
-### 3. Save something you just learned
-**What it is:** the daily habit. Studied something? Struggled with something?
-Tell it in one sentence — it files a proper note for you.
-
-**How:** in the chat:
 ```
 /log spent an hour on binary search trees, insertion finally makes sense
 but deleting nodes with two children still confuses me
 ```
+
 That's it. It records what you learned, how solid it felt, and even keeps the
-"still confuses me" part — the struggles are valuable data.
+"still confuses me" part — the struggles are valuable data. Every save ends
+with a receipt: what changed, which numbers moved, "map data refreshed —
+reload the tab", and a note that a local snapshot was saved (nothing leaves
+your machine). No silent writes, ever.
 
-### 4. Ask what you know
-**What it is:** search your own brain. It answers from YOUR notes first
-(citing them), and clearly separates anything beyond your notes.
+### Get quizzed (this is where scores become real)
+It asks you questions right at the edge of what your notes prove — not too
+easy, not impossible — then grades your answers against a fixed rubric and
+records the result *with receipts*. This is the only way the "tested" score
+ever changes, so it can't be gamed and it never drifts.
 
-**How:**
 ```
-/query what do I actually know about hash tables?
+/quiz test me on graphs
 ```
 
-### 5. Bring in your old notes
-**What it is:** got years of notes in another app (Joplin, Obsidian, or plain
-markdown files)? It imports them in bulk, then reads each one and tags it
-properly so it joins the map.
+Every quiz also files its own session note — the questions, your answers, the
+grading — and pins it to the score as evidence, so on the map you can click a
+tested topic and read exactly why it earned its color.
 
-**How:** export your notes from the other app as markdown, then:
+### Review before you forget
+Knowledge fades — the system literally decays scores with time. This picks
+the topics that are important-but-getting-stale and runs a quick refresh
+session, then records that you reviewed them.
+
+```
+/review what's getting rusty?
+```
+
+Then glance at the map. The moment a dot turns green is the whole point.
+
+---
+
+## Bring in your old notes
+
+Got years of notes in another app (Joplin, Obsidian, or plain markdown
+files)? It imports them in bulk, then reads each one and tags it properly so
+it joins the map.
+
+Export your notes from the other app as markdown, then:
 ```
 /ingest import the folder ~/Desktop/my-notes-export
 ```
 Heads-up: the tagging step reads every note with AI, so a big pile of notes
 takes a while (and Claude usage). Fine to let it run overnight.
 
-### 6. Get quizzed (this is where scores become real)
-**What it is:** it asks you questions right at the edge of what your notes
-prove — not too easy, not impossible — then grades your answers against a
-fixed rubric and records the result *with receipts*. This is the only way the
-"tested" score ever changes, so it can't be gamed and it never drifts.
-
-**How:**
+Everything you import starts at **"aware"** — you *have* the material, but having
+a file doesn't mean you've learned it. As the AI reads each note to tag it, it
+also decides whether the note actually shows you *engaged* with the material
+(worked problems, your own explanations) and bumps those up to "know it." If you
+already know a folder cold, import it with `--confidence 2` so it doesn't have to
+guess. And if it ever calls one wrong, just tell it — "actually, bump red-black
+trees to known" — or be exact:
 ```
-/quiz test me on graphs
+brain set-confidence 2024-03-14-red-black-trees --level 2
+```
+(That only touches your self-rating — the quiz-tested score still rules where a
+quiz exists.)
+
+---
+
+## The map and its views
+
+### See your knowledge map
+Every topic you've ever taken a note on, drawn as a dot. Bigger dot = more of
+your knowledge lives there. The color is the topic's proven depth, one rung
+per color: grey = aware (you have the material), yellow = you understand it,
+green = you've applied it, teal = fluent, blue = mastery. Dashed outline =
+something your goals need that you haven't touched yet. Lines connect topics
+that show up together — or whose notes link to each other (the AI adds those
+cross-references as it organizes new material).
+
+**How:** say "show my map" (or run `brain ui`). Your browser opens the map.
+Click any dot to zoom into its neighborhood and
+see the actual notes behind it (a filter box appears when the list is long) —
+and **click any note in that list to read it right there**, nicely formatted —
+math equations, flowchart diagrams, and color-highlighted code all render
+properly — without leaving the map. **Click any color in the legend** to fade
+the rest of the map and light up just the topics at that rung (click it again
+to clear). **Type in the search bar** and the map narrows as you type — every
+topic still matching stays lit while the rest fades, and the suggestion list
+ranks your strongest nodes first; pick one to jump straight into it. Use the
+**Goal** dropdown to show only what matters for one goal, and tick
+**show gaps** to light up what's missing. Prefer dark mode? Hit the 🌙 button
+in the header — it remembers your choice and follows you everywhere.
+
+One small honesty feature: the header always says how old the picture is
+("data generated 5 min ago"). If you logged something and don't see it,
+that line is the tell — just reload the tab.
+
+### Check the other views
+The header has four view buttons — **Map · Readiness ·
+Divergence · Real estate** (or just press 1–4). Same page, no reloads, and
+your selections follow you: pick a goal on the Readiness view, press 1, and
+the map is already showing that goal's corner of your knowledge. Three
+pictures:
+
+- **Readiness** — one glance answers *"am I ready for this goal?"* The
+  green shape is what you know; the dashed outline is what the goal requires.
+  Wherever green fills the outline, you're ready. Dents = study there.
+  (No goal picked yet? It offers you the list.)
+- **Divergence** — a dot for each topic that's been quiz-tested,
+  comparing how confident you *felt* vs how you *performed*. Dots below the
+  line = overconfident (feelings ahead of evidence). Above = you're better
+  than you think. (Never been quizzed? The view shows a clearly-labeled
+  example chart so you can see what's coming — your first real dot lands
+  after your first quiz.)
+- **Real estate** — every topic as a box; bigger box = more of your
+  knowledge lives there, and the color is the topic's *proven* rung — the
+  same colors as the map, so one glance shows where your knowledge is big
+  but unproven (a big grey box is a to-do list). Hover any box for its
+  exact share. **Scroll in** on a crowded corner and it re-tiles into its
+  own view — first a whole domain, then a single topic's actual notes
+  (click one to read it right there); scroll out to back up. **Click any
+  box** (or any dot on the divergence chart) and it jumps you to that
+  topic in the map with its full summary open — the notes behind it, its
+  scores, what goals need it.
+
+---
+
+## The rest of the network
+
+### Ask what you know
+Search your own brain. It answers from YOUR notes first (citing them), and
+clearly separates anything beyond your notes.
+```
+/query what do I actually know about hash tables?
 ```
 
-### 7. Review before you forget
-**What it is:** knowledge fades — the system literally decays scores with
-time. This picks the topics that are important-but-getting-stale and runs a
-quick refresh session, then records that you reviewed them.
+### Ask "what should I study next?"
+The ranked to-do list. It compares every goal's requirements against your
+evidence and sorts by what's most urgent and most missing.
 
-**How:**
-```
-/review what's getting rusty?
-```
+**How:** just ask — "what should I study next?" (or run `brain gaps`, and
+`brain gaps --goal gcp-ace` for one goal).
 
-### 8. Practice interviews out loud
-**What it is:** it writes a personalized mock-interview script — questions
-aimed at your weak spots — that you run with Claude's voice mode on your
-phone, like a phone screen. Afterward, the debrief gets recorded as real
-evidence (answering under pressure counts for a lot).
-
-**How:**
+### Practice interviews out loud
+It writes a personalized mock-interview script — questions aimed at your weak
+spots — that you run with Claude's voice mode on your phone, like a phone
+screen. Afterward, the debrief gets recorded as real evidence (answering
+under pressure counts for a lot).
 ```
 /interview-pack 30 minutes, data structures focus
 ```
 …do the voice session, then paste the debrief back with `/debrief`.
 
-### 9. Ask "what should I study next?"
-**What it is:** the ranked to-do list. It compares every goal's requirements
-against your evidence and sorts by what's most urgent and most missing.
-
-**How:**
-```
-python -m brain gaps
-```
-Or for one goal: `python -m brain gaps --goal <goal-id>`
-
-### 10. Chart a path to a custom goal
-**What it is:** for objectives that aren't one of your set goals ("get ready
-for a FAANG interview loop"), it compiles a route through the map — which
-topics, in what order, with your weak segments highlighted — and draws it as
-an overlay on the map.
-
-**How:**
+### Chart a path to a custom goal
+For objectives that aren't one of your set goals ("get ready for a FAANG
+interview loop"), it compiles a route through the map — which topics, in what
+order, with your weak segments highlighted — and draws it as an overlay on
+the map.
 ```
 /path get ready for FAANG interviews by spring
 ```
 Then pick the pathway from the **Pathway** dropdown in the map.
 
-### 11. Teach it a course or study plan
-**What it is:** hand it a syllabus (or any outline — a cert exam guide, a
-book's table of contents, a study plan) and it learns the *structure*: which
-topics the course covers, in what order, and what builds on what. That
-structure joins your knowledge model, so the system can later tell you how
-ready you are for week 5 before you get there.
+### Teach it a course or study plan
+Hand it a syllabus (or any outline — a cert exam guide, a book's table of
+contents, a study plan) and it learns the *structure*: which topics the
+course covers, in what order, and what builds on what. That structure joins
+your knowledge model, so the system can later tell you how ready you are for
+week 5 before you get there.
 
-**How:** save the syllabus as a markdown file (headings for the weeks,
-bullet points for the topics), then:
-```
-python -m brain model import ~/Downloads/course-syllabus.md
-```
-Add `--dry-run` to preview what it would learn without saving anything. Topics
-it already knows get matched up; genuinely new ones get added to its
-vocabulary automatically.
+**How:** save the syllabus as a markdown file (headings for the weeks, bullet
+points for the topics), then say "teach it this syllabus:
+~/Downloads/course-syllabus.md" (or run `brain model import <file>`, with
+`--dry-run` to preview without saving). Topics it already knows get matched
+up (it knows "splay trees" belong to your Trees knowledge); genuinely new
+ones get added to its vocabulary automatically.
 
-Curious how the whole model is doing? `python -m brain model build` prints a
-one-glance health check: how many concepts it tracks, how many you have real
-evidence for, and what's mastered vs still fading.
+Curious how the whole model is doing? Ask it — "how's my knowledge model
+looking?" (`brain model build`) prints a one-glance health check: how many
+concepts it tracks, how many you have real evidence for, and what's mastered
+vs still fading.
 
-Imported courses also show up on the knowledge map — pick one from the
-**Goal** dropdown like any goal and you get the same treatment: suggested
+Imported courses also show up on the knowledge map — the **Goal** dropdown
+lists them under their own **Tracks** heading (goals are things you're
+working toward; tracks are courses and resources you've taught it), and
+picking one gets the same treatment: suggested
 next actions, dashed circles for the parts you haven't touched, and each
 topic's panel notes how many courses/goals converge on it ("in 2 tracks" =
 learn it once, it pays off twice).
 
-### 12. Check if you're ready (and take your brain anywhere)
-**What it is:** two commands that answer the two questions everything else
-builds toward. *"Am I ready?"* — pick any course or goal and get a
+### Check if you're ready (and take your brain anywhere)
+Two questions everything else builds toward. *"Am I ready?"* — ask exactly
+that ("am I ready for gcp-cdl?", or run `brain readiness gcp-cdl`) and get a
 line-by-line verdict where every line explains itself (stale since when,
-missing what, do what first). And *"can another AI help me?"* — a one-screen
-summary of your entire learning state, made to be pasted into any assistant
-(ChatGPT, a fresh Claude chat, whatever) so it instantly knows what you know.
+missing what, do what first). And *"can another AI help me?"* — type
+`/context` and it hands you a one-screen summary of your entire learning
+state, ready to paste into any assistant (ChatGPT, a fresh Claude chat,
+whatever) so it instantly knows what you know (add a goal name to scope it,
+e.g. `/context gcp-cdl`). The export contains no note contents — just topic
+names and states — so it's safe to paste around.
 
-**How:**
-```
-python -m brain readiness <goal-id>
-python -m brain context
-```
-Or just type `/context` in the chat — it runs the export and hands you the
-block ready to copy (add a goal name to scope it, e.g. `/context <goal-id>`).
-The context export fits on one screen and contains no note contents — just
-topic names and states — so it's safe to paste around.
+### Keep it healthy, keep it yours
+Something feel off? `brain doctor` checks the whole setup — packages, the
+search index, the map data, all of it — and every problem it finds comes
+with the exact command that fixes it. (Skills also fix the routine stuff
+themselves as they run — a stale index heals on the next question.)
+
+Worried about losing your notes? They're all on your machine, saved with
+little local snapshots as you work. When you want an off-site copy too,
+`brain backup --setup` shows you how to wire up a private online home for
+them, and `brain backup` is the one and only command that sends anything
+there.
 
 ---
 
@@ -216,9 +305,9 @@ them with any editor. Nothing syncs anywhere.
 **What does it cost?** Nothing to run. The AI features use a Claude
 subscription you'd already have for Claude Code.
 
-**Can I break it?** Hard to. The map and search index are disposable — one
-command (`python -m brain rebuild`) rebuilds them from your notes. The notes
-themselves are versioned with git, so anything can be undone.
+**Can I break it?** Hard to. The map and search index are disposable — tell
+it "rebuild the index" (or run `brain rebuild`) and they're rebuilt from your
+notes. The notes themselves are versioned with git, so anything can be undone.
 
 **Why does it say I'm weak at something I know well?** Because you haven't
 *proven* it yet — self-confidence only counts so far (it caps at level 3 by
@@ -228,3 +317,9 @@ catches up and the dot turns green.
 **Do I have to use all of this?** No. The minimum loop is: `/log` when you
 learn, `/quiz` sometimes, and glance at the map. Everything else is there
 when you want it.
+
+**What if something breaks, or a future AI session wants to "improve" things?**
+The repo carries its own guardrails: CLAUDE.md records the working rules and
+integrity invariants, docs/architecture.md records the design decisions, and
+`brain doctor` diagnoses the routine stuff — so a fresh session doesn't
+undo deliberate decisions or leave you stranded.

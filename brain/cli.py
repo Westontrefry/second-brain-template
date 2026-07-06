@@ -107,7 +107,11 @@ def cmd_import(args: argparse.Namespace) -> int:
     verb = "would import" if args.dry_run else "imported"
     print(f"{verb} {len(result.created)} note(s), skipped {len(result.skipped)}")
     if result.created and not args.dry_run:
-        print("imported notes have no goal links yet — run the /ingest skill to enrich them")
+        print(f"imported at confidence {args.confidence} "
+              f"({'awareness' if args.confidence == 1 else 'known'}) — "
+              "run the /ingest skill to add goal links and let the AI judge each "
+              "note's level; import a folder of known material with --confidence 2 "
+              "for exact control")
     return 0
 
 
@@ -135,7 +139,7 @@ def cmd_search(args: argparse.Namespace) -> int:
         min_confidence=args.min_confidence,
     )
     if not hits:
-        print("no results (is the index built? try: python -m brain ingest)")
+        print("no results (is the index built? try: brain ingest)")
         return 1
     for h in hits:
         rel = Path(h.path).relative_to(Path.cwd()) if Path(h.path).is_relative_to(Path.cwd()) else h.path
@@ -174,7 +178,8 @@ def cmd_assess(args: argparse.Namespace) -> int:
 
     try:
         paths = assess(args.topic, args.level, args.rationale,
-                       [e.strip() for e in args.evidence.split(",") if e.strip()])
+                       [e.strip() for e in args.evidence.split(",") if e.strip()],
+                       source=args.source)
     except ValueError as e:
         print(e)
         return 1
@@ -184,17 +189,81 @@ def cmd_assess(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_set_confidence(args: argparse.Namespace) -> int:
+    from .assess import set_confidence
+    from .ingest import sync
+
+    try:
+        path = set_confidence(args.note_id, args.level)
+    except ValueError as e:
+        print(e)
+        return 1
+    sync()
+    print(f"set confidence = {args.level} on {path.name}")
+    return 0
+
+
 def cmd_log_exposure(args: argparse.Namespace) -> int:
     from .assess import log_exposure
     from .ingest import sync
 
     try:
-        paths = log_exposure(args.topic)
+        paths = log_exposure(args.topic, source=args.source)
     except ValueError as e:
         print(e)
         return 1
     sync()
     print(f"exposure logged for {args.topic!r} on {len(paths)} note(s)")
+    return 0
+
+
+def cmd_first_touch(args: argparse.Namespace) -> int:
+    from .first_touch import explainer
+
+    try:
+        text = explainer(args.skill)
+    except ValueError as e:
+        print(e)
+        return 1
+    if text:
+        print(text)
+    return 0
+
+
+def cmd_demo(args: argparse.Namespace) -> int:
+    from collections import Counter
+
+    from .demo import install, installed, remove
+    from .ingest import sync
+
+    if args.install:
+        try:
+            copied, skipped = install()
+        except ValueError as e:
+            print(e)
+            return 1
+        if not copied and not skipped:
+            print("no demo pack found (expected notes in examples/starter/)")
+            return 1
+        if copied:
+            sync()
+        by_domain = Counter(p.parent.name for p in copied)
+        print(f"installed {len(copied)} demo note(s)"
+              + (f" ({', '.join(f'{d}: {n}' for d, n in sorted(by_domain.items()))})"
+                 if copied else "")
+              + (f", {len(skipped)} already installed" if skipped else ""))
+        print("they are synthetic, marked source: demo, and never touch your own notes")
+        print("see them on the map: brain ui")
+        print("remove anytime: brain demo --remove")
+        return 0
+
+    removed = remove()
+    if not removed:
+        print("no demo notes installed, nothing to remove")
+        return 0
+    sync()
+    print(f"removed {len(removed)} demo note(s)")
+    print("zero trace left: demo notes are never assessed, so no history mentions them")
     return 0
 
 
@@ -294,9 +363,33 @@ def cmd_ui(args: argparse.Namespace) -> int:
 
     export()
     page = root() / "ui" / "index.html"
+    uri = page.as_uri()
+    if getattr(args, "toured", False):
+        # /start step 4 only: the tour just explained the map, so the page
+        # retires the map coach-mark (localStorage sb-hint-map) on load.
+        uri += "?toured=1"
     print(f"opening {page}")
-    webbrowser.open(page.as_uri())
+    webbrowser.open(uri)
     return 0
+
+
+def cmd_backup(args: argparse.Namespace) -> int:
+    from .backup import push, setup_text
+
+    if args.setup:
+        print(setup_text(), end="")
+        return 0
+    ok, message = push()
+    print(message)
+    return 0 if ok else 1
+
+
+def cmd_doctor(args: argparse.Namespace) -> int:
+    from .doctor import render, run_checks
+
+    checks = run_checks()
+    print(render(checks), end="")
+    return 0 if all(c.ok for c in checks) else 1
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -314,7 +407,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         print(f"  {d}: {by_domain[d]}")
 
     if not store.db_path().exists():
-        print("index: not built (run: python -m brain ingest)")
+        print("index: not built (run: brain ingest)")
         return 0
     con = store.connect()
     n_notes = con.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
@@ -328,7 +421,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         if hashes.get(f.stem) != h:
             stale += 1
     print(f"index: {n_notes} notes, {n_chunks} chunks", end="")
-    print(f", {stale} pending change(s) (run: python -m brain ingest)" if stale else ", up to date")
+    print(f", {stale} pending change(s) (run: brain ingest)" if stale else ", up to date")
     return 0
 
 
@@ -358,7 +451,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--domain", choices=cfg["domains"],
                    help="domain for all imported notes (default: map folder names)")
     p.add_argument("--dry-run", action="store_true", help="show what would be imported")
-    p.add_argument("--confidence", type=int, default=2)
+    p.add_argument("--confidence", type=int, default=1,
+                   help="1 = you have/recognize the material (default); "
+                        "2 = material you already know")
     p.add_argument("--importance", type=int, default=2)
     p.set_defaults(func=cmd_import)
 
@@ -388,11 +483,36 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--rationale", required=True,
                    help="which evidence, classified at what rubric level, with quotes")
     p.add_argument("--evidence", required=True, help="comma-separated note ids")
+    p.add_argument("--source", help="skill that produced this assessment "
+                                    "(e.g. quiz, debrief) — powers first-touch detection")
     p.set_defaults(func=cmd_assess)
+
+    p = sub.add_parser("set-confidence",
+                       help="override a note's self/observed confidence (awareness->known); "
+                            "does not touch quiz-based ai_confidence")
+    p.add_argument("note_id")
+    p.add_argument("--level", type=int, required=True,
+                   help="1 = awareness (have it), 2 = known, up to 5")
+    p.set_defaults(func=cmd_set_confidence)
 
     p = sub.add_parser("log-exposure", help="record a review event on a topic")
     p.add_argument("topic")
+    p.add_argument("--source", help="skill that produced this exposure "
+                                    "(e.g. review) — powers first-touch detection")
     p.set_defaults(func=cmd_log_exposure)
+
+    p = sub.add_parser("first-touch",
+                       help="print a one-time explainer the first time a skill is used "
+                            "(empty output after); read-only, powers skill first-touches")
+    p.add_argument("skill", choices=["quiz", "review", "ingest", "path", "debrief"])
+    p.set_defaults(func=cmd_first_touch)
+
+    p = sub.add_parser("demo", help="install or remove the starter demo pack "
+                                    "(synthetic notes, source: demo, removable without trace)")
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument("--install", action="store_true", help="copy examples/starter/ notes in")
+    g.add_argument("--remove", action="store_true", help="delete every source: demo note")
+    p.set_defaults(func=cmd_demo)
 
     p = sub.add_parser("model", help="knowledge model: import learning resources as tracks")
     msub = p.add_subparsers(dest="model_command", required=True)
@@ -423,15 +543,37 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_graph)
 
     p = sub.add_parser("ui", help="regenerate graph data and open the UI")
+    p.add_argument("--toured", action="store_true",
+                   help="mark the map coach-mark seen on load (used by the /start tour "
+                        "after it has explained the map itself)")
     p.set_defaults(func=cmd_ui)
 
     p = sub.add_parser("status", help="counts and index freshness")
     p.set_defaults(func=cmd_status)
 
+    p = sub.add_parser("doctor", help="health checks with the one fixing command each "
+                                      "(exit 1 if anything needs fixing)")
+    p.set_defaults(func=cmd_doctor)
+
+    p = sub.add_parser("backup", help="push local snapshots to your private remote "
+                                      "(the only command that pushes anything)")
+    p.add_argument("--setup", action="store_true",
+                   help="walk through wiring up a private remote (prints steps, "
+                        "changes nothing)")
+    p.set_defaults(func=cmd_backup)
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if not argv:
+        # Bare `brain` is the home screen, not usage (PLAN-UX U1);
+        # argparse help stays under `brain --help`.
+        from .home import render_home
+
+        print(render_home(), end="")
+        return 0
     args = build_parser().parse_args(argv)
     return args.func(args)
 

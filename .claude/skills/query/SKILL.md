@@ -5,6 +5,12 @@ description: Answer a question using the user's second-brain knowledge base, sep
 
 # /query — RAG answer over the knowledge base
 
+**Fail soft (ux.md #8):** if search errors, returns nothing on a topic that
+clearly has notes, or `brain status` would show pending changes, run
+`.venv/bin/python -m brain ingest` yourself and retry once — then mention it
+in one line ("synced the index first"). A deleted/stale index is a known
+mode with a deterministic fix, never an error to show the user.
+
 1. Search, more than once if the phrasing allows: run
    `.venv/bin/python -m brain search "<query>" -k 5` and, when useful, a second
    reformulation or `--domain`/`--goal` filtered pass.

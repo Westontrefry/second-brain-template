@@ -193,8 +193,8 @@ def build(today: dt.date | None = None) -> dict:
     for track in model.tracks:
         if track.adapter == "roadmap":
             continue
-        track_entries.append({"id": track.track, "title": f"{track.title} (track)",
-                              "priority": 0})
+        track_entries.append({"id": track.track, "title": track.title,
+                              "kind": "track", "priority": 0})
         resolved = {}
         for ref in track.concept_ids():
             cid = model.resolve_ref(ref)
@@ -234,7 +234,8 @@ def build(today: dt.date | None = None) -> dict:
     return {
         "suggestions": suggestions,
         "generated": today.isoformat(),
-        "goals": [{"id": g["id"], "title": g["title"], "priority": g["priority"]}
+        "goals": [{"id": g["id"], "title": g["title"], "kind": "goal",
+                   "priority": g["priority"]}
                   for g in goals.values()] + track_entries,
         "nodes": [
             {**n, "goals": sorted(n["goals"]),
@@ -297,6 +298,10 @@ def _load_paths() -> list[dict]:
 
 def export(today: dt.date | None = None) -> Path:
     graph = build(today)
+    # wall-clock stamp for the UI header's "data generated <ago>" line — an old
+    # tab must be self-diagnosing (PLAN-UX U3); "generated" stays date-only for
+    # deterministic tests and tooling.
+    graph["generated_at"] = dt.datetime.now().isoformat(timespec="seconds")
     for node in graph["nodes"]:
         node.pop("domains", None)
     ui_dir = root() / "ui"

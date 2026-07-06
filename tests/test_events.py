@@ -51,5 +51,24 @@ def test_events_accumulate_append_only(sandbox):
     assert [e.get("level") for e in events[:2]] == [2, 3]
 
 
+def test_source_tag_written_when_given(sandbox):
+    write_note(sandbox, "2026-02-01-evt-note", topics=["testing"])
+    assess("testing", 3, "clear explanation", ["2026-02-01-evt-note"], source="quiz")
+    log_exposure("testing", source="review")
+    events = read_events(sandbox)
+    assert events[0]["source"] == "quiz"
+    assert events[1]["source"] == "review"
+
+
+def test_source_tag_absent_when_omitted(sandbox):
+    # legacy-clean: no source field on sourceless writes, so old events stay valid
+    write_note(sandbox, "2026-02-01-evt-note", topics=["testing"])
+    assess("testing", 3, "clear explanation", ["2026-02-01-evt-note"])
+    log_exposure("testing")
+    events = read_events(sandbox)
+    assert "source" not in events[0]
+    assert "source" not in events[1]
+
+
 def test_events_path_respects_sandbox(sandbox):
     assert events_path() == sandbox / "events.jsonl"

@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Second Brain — knowledge graph</title>
+<title>Second Brain</title>
 <link rel="stylesheet" href="katex/katex.min.css">
 <link rel="stylesheet" href="hljs-github.min.css" id="hljsCss">
 <style>
-  :root { --strong:#1D9E75; --weak:#EF9F27; --hot:#D85A30; --dim-op:.12;
+  :root { --lvl1:#9AA0A6; --lvl2:#EF9F27; --lvl3:#6BAE45; --lvl4:#1D9E75;
+          --lvl5:#2C7FB8; --hot:#D85A30; --dim-op:.12;
           --ink:#2c2c2a; --muted:#77766f; --line:#d9d7ce; --bg:#faf9f5;
           --panel:#ffffff; --code-bg:#f4f2ea; --edge:#9a988f; --link:#185FA5; }
   body.dark { --ink:#e6e4dc; --muted:#9c9a90; --line:#3b3a36; --bg:#1b1b19;
@@ -21,7 +22,11 @@
   header h1 { font-size:15px; font-weight:600; margin:0 8px 0 0; }
   header label { font-size:12.5px; color:var(--muted); display:flex; gap:5px; align-items:center; }
   select { font:inherit; font-size:12.5px; padding:2px 4px; }
-  #legend { margin-left:auto; display:flex; gap:12px; font-size:12px; color:var(--muted); }
+  #legend { margin-left:auto; display:flex; gap:6px; font-size:12px; color:var(--muted); }
+  #legend [data-level] { cursor:pointer; user-select:none; padding:2px 8px;
+                         border:1px solid transparent; border-radius:12px; }
+  #legend [data-level]:hover { border-color:var(--line); }
+  #legend [data-level].active { border-color:var(--ink); color:var(--ink); background:var(--panel); }
   .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:4px; vertical-align:-1px; }
   #stage { position:relative; width:100vw; height:calc(100vh - 45px); }
   svg { width:100%; height:100%; display:block; cursor:grab; }
@@ -108,26 +113,109 @@
   #panel .noteLink { color:var(--link); cursor:pointer; }
   #panel #noteFilter { width:100%; font:inherit; font-size:12.5px; padding:4px 8px;
                        border:1px solid var(--line); border-radius:6px; margin:2px 0 6px; }
+  #search { position:relative; }
+  #search input { font:inherit; font-size:12.5px; padding:3px 9px; width:190px;
+                  border:1px solid var(--line); border-radius:6px;
+                  background:var(--panel); color:var(--ink); }
+  #search input:focus { outline:none; border-color:var(--edge); }
+  #searchSug { position:absolute; top:calc(100% + 5px); left:0; min-width:250px; z-index:30;
+               background:var(--panel); border:1px solid var(--line); border-radius:8px;
+               box-shadow:0 4px 18px rgba(0,0,0,.10); display:none;
+               max-height:320px; overflow-y:auto; }
+  #searchSug .item { display:flex; gap:8px; align-items:center; padding:6px 11px;
+                     cursor:pointer; font-size:12.5px; white-space:nowrap; }
+  #searchSug .item.sel, #searchSug .item:hover { background:var(--code-bg); }
+  #searchSug .meta { margin-left:auto; color:var(--muted); font-size:11px; padding-left:14px; }
+  /* ---- unified shell: view tabs + chart views (PLAN-UX U0) ---- */
+  #viewTabs { display:flex; gap:2px; }
+  #viewTabs button { font:inherit; font-size:12.5px; padding:3px 12px; border:1px solid transparent;
+                     border-radius:14px; background:none; cursor:pointer; color:var(--muted); }
+  #viewTabs button:hover { border-color:var(--line); }
+  #viewTabs button.active { border-color:var(--ink); color:var(--ink); }
+  /* !important: #legend's own display:flex (ID selector) outranks this class rule */
+  body:not([data-view="map"]) .maponly { display:none !important; }
+  body:not([data-view="map"]) #stage { display:none; }
+  .chartview { display:none; height:calc(100vh - 45px); overflow:auto;
+               padding:24px; justify-content:center; align-items:flex-start; }
+  body[data-view="readiness"] #viewReadiness,
+  body[data-view="divergence"] #viewDivergence,
+  body[data-view="estate"] #viewEstate { display:flex; }
+  .chartcard { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+               padding:16px 20px; box-shadow:0 4px 18px rgba(0,0,0,.06); }
+  .chartcard h2 { font-size:13px; margin:0 0 2px; }
+  .chartcard .csub { color:var(--muted); font-size:11.5px; margin-bottom:8px; }
+  .chartview .axis text, .chartview .tick text { font-size:10.5px; fill:var(--muted); }
+  .chartview svg { overflow:visible; }
+  /* empty states carry the same visual weight as the chart they stand in for:
+     chart-sized footprint, readable type (readability pass, 2026-07-05) */
+  .chartview .empty { color:var(--ink); font-size:15px; line-height:1.75;
+                      padding:70px 50px; max-width:660px; min-width:min(540px, 70vw);
+                      min-height:300px; display:flex; flex-direction:column;
+                      justify-content:center; }
+  .chartview .chip { display:inline-block; font-size:13.5px; padding:6px 16px; margin:4px 8px 4px 0;
+                     border:1px solid var(--line); border-radius:20px; cursor:pointer; background:var(--panel); }
+  .chartview .chip:hover { border-color:var(--ink); }
+  .clegend { display:flex; gap:14px; font-size:11.5px; color:var(--muted); margin-top:6px; flex-wrap:wrap; }
+  #tmSub .crumb { color:var(--link); cursor:pointer; }
+  #tmSub .crumb:hover { text-decoration:underline; }
+  .swatch { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:4px; vertical-align:-1px; }
+  /* ---- first-visit coach-marks (Arc A v2): spotlight + anchored callout ---- */
+  #cmCatch { position:fixed; inset:0; z-index:59; display:none; }
+  #cmSpot { position:fixed; z-index:60; border-radius:10px; pointer-events:none; display:none;
+            box-shadow:0 0 0 200vmax rgba(15,15,12,.45);
+            transition:top .25s, left .25s, width .25s, height .25s; }
+  body.dark #cmSpot { box-shadow:0 0 0 200vmax rgba(0,0,0,.62); }
+  #cmCard { position:fixed; z-index:61; max-width:410px; background:var(--panel);
+            color:var(--ink); font-size:15px; line-height:1.7; padding:14px 18px 12px;
+            border:1px solid var(--line); border-radius:10px; display:none;
+            box-shadow:0 10px 34px rgba(0,0,0,.28); }
+  #cmCard .cmGot { margin-top:10px; font:inherit; font-size:12.5px; padding:4px 14px;
+                   border:1px solid var(--line); border-radius:6px; background:var(--code-bg);
+                   cursor:pointer; color:var(--ink); }
+  #cmCard .cmGot:hover { border-color:var(--ink); }
+  #cmCard .cmArrow { position:absolute; width:12px; height:12px; background:var(--panel);
+                     transform:rotate(45deg); }
+  #cmCard .cmArrow.up { border-left:1px solid var(--line); border-top:1px solid var(--line); }
+  #cmCard .cmArrow.down { border-right:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .helpBtn { cursor:pointer; color:var(--muted); font-size:11px; font-weight:400;
+             border:1px solid var(--line); border-radius:50%; width:16px; height:16px;
+             display:inline-flex; align-items:center; justify-content:center;
+             margin-left:6px; user-select:none; }
+  .helpBtn:hover { color:var(--ink); border-color:var(--ink); }
 </style>
 </head>
-<body>
+<body data-view="map">
 <header>
   <h1>Second Brain</h1>
+  <nav id="viewTabs">
+    <button data-view="map" class="active" title="press 1">Map</button>
+    <button data-view="readiness" title="press 2">Readiness</button>
+    <button data-view="divergence" title="press 3">Divergence</button>
+    <button data-view="estate" title="press 4">Real estate</button>
+  </nav>
+  <div id="search" class="maponly">
+    <input id="searchBox" type="text" placeholder="search topics…" autocomplete="off" spellcheck="false">
+    <div id="searchSug"></div>
+  </div>
   <label>Goal
     <select id="goalSel"><option value="">all</option></select>
   </label>
-  <label>Pathway
+  <label class="maponly">Pathway
     <select id="pathSel"><option value="">none</option></select>
   </label>
-  <label><input type="checkbox" id="gapToggle"> show gaps</label>
-  <label><input type="checkbox" id="divToggle"> divergence</label>
+  <label class="maponly"><input type="checkbox" id="gapToggle"> show gaps</label>
+  <label class="maponly"><input type="checkbox" id="divToggle"> divergence</label>
+  <span class="helpBtn maponly" data-help="map" title="what am I looking at?">?</span>
   <button id="refBtn" style="font:inherit; font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer;">reference key</button>
-  <a href="dashboard.html" style="font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:var(--panel); color:var(--ink); text-decoration:none;">dashboard →</a>
-  <button id="themeBtn" title="toggle dark mode" style="font:inherit; font-size:12.5px; padding:3px 8px; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer;">🌙</button>
-  <div id="legend">
-    <span><span class="dot" style="background:var(--strong)"></span>strong (≥3)</span>
-    <span><span class="dot" style="background:var(--weak)"></span>weak</span>
-    <span><span class="dot" style="border:1.5px dashed var(--edge)"></span>not yet covered</span>
+  <button id="themeBtn" title="toggle dark mode" style="padding:4px 8px; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color:var(--muted);"></button>
+  <span id="dataAge" style="font-size:11.5px; color:var(--muted); white-space:nowrap;"></span>
+  <div id="legend" class="maponly">
+    <span data-level="1"><span class="dot" style="background:var(--lvl1)"></span>1 aware</span>
+    <span data-level="2"><span class="dot" style="background:var(--lvl2)"></span>2 comprehend</span>
+    <span data-level="3"><span class="dot" style="background:var(--lvl3)"></span>3 apply</span>
+    <span data-level="4"><span class="dot" style="background:var(--lvl4)"></span>4 fluent</span>
+    <span data-level="5"><span class="dot" style="background:var(--lvl5)"></span>5 mastery</span>
+    <span data-level="missing"><span class="dot" style="border:1.5px dashed var(--edge)"></span>not yet covered</span>
   </div>
 </header>
 <div id="stage">
@@ -136,12 +224,41 @@
   <aside id="panel"></aside>
   <aside id="refPanel"></aside>
 </div>
+<div id="viewReadiness" class="chartview">
+  <div class="chartcard">
+    <h2>Goal readiness radar <span class="helpBtn" data-help="readiness" title="what am I looking at?">?</span></h2>
+    <div class="csub">evidenced level vs required level per roadmap topic</div>
+    <div id="radar"></div>
+    <div class="clegend">
+      <span><span class="swatch" style="background:var(--lvl4)"></span>evidenced</span>
+      <span><span class="swatch" style="border:1.5px dashed var(--hot); background:none"></span>required</span>
+    </div>
+  </div>
+</div>
+<div id="viewDivergence" class="chartview">
+  <div class="chartcard">
+    <h2>Confidence divergence <span class="helpBtn" data-help="divergence" title="what am I looking at?">?</span></h2>
+    <div class="csub">self-confidence vs AI-assessed level per topic — dots below the line are overconfidence</div>
+    <div id="scatter"></div>
+  </div>
+</div>
+<div id="viewEstate" class="chartview">
+  <div class="chartcard">
+    <h2>Knowledge real estate <span class="helpBtn" data-help="estate" title="what am I looking at?">?</span></h2>
+    <div class="csub" id="tmSub"></div>
+    <div id="treemap"></div>
+    <div class="clegend" id="tmLegend"></div>
+  </div>
+</div>
 <div id="noteOverlay">
   <div id="noteBox">
     <div id="noteHead"></div>
     <div id="noteBody"></div>
   </div>
 </div>
+<div id="cmCatch"></div>
+<div id="cmSpot"></div>
+<div id="cmCard"></div>
 <script src="d3.v7.min.js"></script>
 <script src="marked.min.js"></script>
 <script src="katex/katex.min.js"></script>
@@ -152,10 +269,12 @@
 <script src="notes.data.js"></script>
 <script>
 // ---- theme: dark toggle, persisted, defaults to system preference ----
+const ICON_MOON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+const ICON_SUN = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.07" y2="4.93"/></svg>';
 function applyTheme(dark) {
   document.body.classList.toggle('dark', dark);
   const btn = document.getElementById('themeBtn');
-  if (btn) btn.textContent = dark ? '☀️' : '🌙';
+  if (btn) btn.innerHTML = dark ? ICON_SUN : ICON_MOON;
   const css = document.getElementById('hljsCss');
   if (css) css.href = dark ? 'hljs-github-dark.min.css' : 'hljs-github.min.css';
   if (window.mermaid) {
@@ -170,9 +289,138 @@ document.getElementById('themeBtn').addEventListener('click', () => {
   localStorage.setItem('sb-theme', dark ? 'dark' : 'light');
   applyTheme(dark);
 });
+
+// ---- first-visit coach-marks (Arc A, revised 2026-07-05): the first time a
+// view opens, dim the page and spotlight the element the explainer is about,
+// with the text anchored to it. Shows once per hint (localStorage key);
+// dismiss = got it / click anywhere / Esc, and any dismissal counts as seen
+// because the ? next to the view title replays it on demand. The estate zoom
+// tip waits for the orientation mark's turn and also retires the moment the
+// user actually scroll-zooms. State-triggered only; no timers anywhere.
+// copy rule (locked 2026-07-05): no paragraphs — one fact per line, bold
+// lead, readable in two seconds. Warm but terse; no em-dashes.
+const HINT_TEXT = {
+  map: '<b>Every dot is a topic.</b><br>' +
+       'Bigger = more of your knowledge lives there.<br>' +
+       'Color = proven depth, grey up to blue.<br>' +
+       'Dashed = a goal needs it, untouched so far.<br>' +
+       'Click any dot to explore.',
+  readiness: '<b>Spokes are what this goal requires.</b><br>' +
+       'Filled shape = proven so far.<br>' +
+       'Dashed line = level required.<br>' +
+       'The gap between them is your to-do list.',
+  divergence: '<b>Feeling vs proof, one dot per topic.</b><br>' +
+       'Below the line = confidence ahead of evidence.<br>' +
+       'Worth a quiz to be sure.',
+  estate: '<b>Box size = where your knowledge lives.</b><br>' +
+       'Color = how much is proven, same rungs as the map.<br>' +
+       'Big grey box = a friendly to-do list.',
+  'estate-zoom': '<b>Scroll in on a crowded box</b> to re-tile it,<br>' +
+       'all the way down to single notes.<br>' +
+       'Scroll out to back up.',
+};
+// what each mark spotlights: the element its copy actually decodes
+const CM_TARGET = {
+  map: '#legend',
+  readiness: '#radar',
+  divergence: '#scatter',
+  estate: '#treemap',
+  'estate-zoom': '#treemap',
+};
+// a chart's first-touch waits until the chart actually rendered content: empty
+// states are their own guidance (ux.md #5) and must not get a second guidance
+// layer stacked on top describing a chart that isn't there. Each chart draws
+// either an .empty div or an <svg>, never both, so svg presence is exact.
+const CM_READY = {
+  map: () => true,
+  readiness: () => !!document.querySelector('#radar svg'),
+  divergence: () => !!document.querySelector('#scatter > svg'),  // direct child = real chart; the example svg is nested in a wrapper
+  estate: () => !!document.querySelector('#treemap svg'),
+  'estate-zoom': () => !!document.querySelector('#treemap svg'),
+};
+let cmActive = null;  // hint key currently on screen, or null
+let cmRepeat = false; // this display is at least the second exposure of the key
+const cmCatch = document.getElementById('cmCatch');
+const cmSpot = document.getElementById('cmSpot');
+const cmCard = document.getElementById('cmCard');
+function hintSeen(k) { return localStorage.getItem('sb-hint-' + k) === '1'; }
+function markHintSeen(k) {
+  localStorage.setItem('sb-hint-' + k, '1');
+  if (cmActive === k) cmClose(false);  // e.g. they scroll-zoomed mid-mark
+}
+function cmPlace() {
+  const t = document.querySelector(CM_TARGET[cmActive]);
+  if (!t) return false;
+  const r = t.getBoundingClientRect();
+  if (!r.width && !r.height) return false;
+  const pad = 6;
+  cmSpot.style.top = (r.top - pad) + 'px';
+  cmSpot.style.left = (r.left - pad) + 'px';
+  cmSpot.style.width = (r.width + 2 * pad) + 'px';
+  cmSpot.style.height = (r.height + 2 * pad) + 'px';
+  // measure the card, then anchor it below the target (above if no room)
+  cmCard.style.visibility = 'hidden'; cmCard.style.display = 'block';
+  const cw = cmCard.offsetWidth, ch = cmCard.offsetHeight;
+  const below = r.bottom + 16 + ch < window.innerHeight;
+  const top = below ? r.bottom + 16 : Math.max(10, r.top - 16 - ch);
+  const left = Math.min(Math.max(12, r.left + r.width / 2 - cw / 2),
+                        window.innerWidth - cw - 12);
+  cmCard.style.top = top + 'px';
+  cmCard.style.left = left + 'px';
+  const arrow = cmCard.querySelector('.cmArrow');
+  arrow.className = 'cmArrow ' + (below ? 'up' : 'down');
+  arrow.style[below ? 'top' : 'bottom'] = '-7px';
+  arrow.style.left = Math.min(Math.max(14, r.left + r.width / 2 - left - 6), cw - 26) + 'px';
+  cmCard.style.visibility = '';
+  return true;
+}
+function cmShow(k) {
+  if (!CM_READY[k]()) return;  // chart not drawn yet: its empty state leads
+  cmActive = k;
+  cmCard.innerHTML = '<div class="cmArrow"></div>' + HINT_TEXT[k] +
+                     '<div><button class="cmGot">got it</button></div>';
+  cmCard.querySelector('.cmGot').addEventListener('click', () => cmClose(true));
+  if (!cmPlace()) { cmActive = null; return; }
+  // exposure staging: first display records 'shown'; from the second exposure
+  // on, even a click-away retires the hint (asking for "got it" twice nags)
+  const prev = localStorage.getItem('sb-hint-' + k);
+  cmRepeat = prev === 'shown';
+  if (prev === null) localStorage.setItem('sb-hint-' + k, 'shown');
+  cmCatch.style.display = 'block';
+  cmSpot.style.display = 'block';
+  cmCard.style.display = 'block';
+}
+function cmClose(seen) {
+  const k = cmActive;
+  cmActive = null;
+  cmCatch.style.display = cmSpot.style.display = cmCard.style.display = 'none';
+  if ((seen || cmRepeat) && k) localStorage.setItem('sb-hint-' + k, '1');
+  // the estate zoom tip takes its turn only on an explicit dismissal — after
+  // a click-away, popping another card immediately would ignore the signal
+  if (seen && k === 'estate' && document.body.dataset.view === 'estate' && !hintSeen('estate-zoom')) {
+    requestAnimationFrame(() => cmShow('estate-zoom'));
+  }
+}
+function maybeCoach(view) {
+  if (cmActive || !(view in HINT_TEXT)) return;
+  if (document.body.dataset.view !== view) return;  // stale rAF after a quick view swap
+  if (!hintSeen(view)) cmShow(view);
+  else if (view === 'estate' && !hintSeen('estate-zoom')) cmShow('estate-zoom');
+}
+// click-away only hides (returns next visit): a stray click must not burn the
+// one-time explainer — only "got it" / Esc / doing the action mark it seen
+cmCatch.addEventListener('click', e => { e.stopPropagation(); cmClose(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && cmActive) cmClose(true); });
+window.addEventListener('resize', () => { if (cmActive) cmPlace(); });
+document.querySelectorAll('.chartview').forEach(el =>
+  el.addEventListener('scroll', () => { if (cmActive) cmPlace(); }));
+document.querySelectorAll('.helpBtn').forEach(b =>
+  b.addEventListener('click', () => { if (!cmActive) cmShow(b.dataset.help); }));
+
 if (!window.GRAPH) {
   document.getElementById('stage').innerHTML =
     '<div id="empty">No graph data. Run: <code>python -m brain ui</code></div>';
+  document.getElementById('viewTabs').style.display = 'none';
 } else {
 main();
 }
@@ -204,22 +452,35 @@ function fitView(ids, {duration = 600, padding = 70, avail = W} = {}) {
   (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
 }
 
+// goals and tracks are different things (goals.yaml objectives vs imported
+// courses/resources) — group them so the dropdown says which is which
+const isTrack = gl => gl.kind === 'track' || / \(track\)$/.test(gl.title);
 const goalSel = document.getElementById('goalSel');
-G.goals.forEach(gl => goalSel.add(new Option(gl.title, gl.id)));
+{
+  const mk = (label, items) => {
+    if (!items.length) return;
+    const og = document.createElement('optgroup');
+    og.label = label;
+    items.forEach(gl => og.appendChild(new Option(gl.title.replace(/ \(track\)$/, ''), gl.id)));
+    goalSel.appendChild(og);
+  };
+  mk('Goals', G.goals.filter(gl => !isTrack(gl)));
+  mk('Tracks — imported courses & resources', G.goals.filter(isTrack));
+}
 const pathSel = document.getElementById('pathSel');
 PATHS.forEach((p, i) => pathSel.add(new Option(p.title || p.slug, i)));
 
 let nodes = [], links = [], sim = null, focusId = null, crumbs = [];
 
-function tier(n) {
-  if (n.type === 'missing') return 'missing';
-  return n.evidenced >= 3 ? 'strong' : 'weak';
-}
 function hasGap(n) {
   return n.type === 'missing' || (n.requirements || []).some(r => r.gap > 0);
 }
 function radius(n) { return n.type === 'missing' ? 9 : Math.min(8 + Math.sqrt(n.weight) * 4, 28); }
-function color(n) { return tier(n) === 'strong' ? 'var(--strong)' : 'var(--weak)'; }
+// one color per evidenced rubric level (1 aware … 5 mastery); 0 = grey, no rung earned
+function color(n) {
+  const lvl = Math.min(5, Math.max(0, Math.floor(n.evidenced)));
+  return lvl === 0 ? 'var(--edge)' : `var(--lvl${lvl})`;
+}
 
 function visibleData() {
   const goal = goalSel.value;
@@ -247,8 +508,8 @@ function render() {
 
   node.append('circle')
     .attr('r', radius)
-    .attr('class', d => tier(d) === 'missing' ? 'missing' : '')
-    .attr('fill', d => tier(d) === 'missing' ? 'none' : color(d))
+    .attr('class', d => d.type === 'missing' ? 'missing' : '')
+    .attr('fill', d => d.type === 'missing' ? 'none' : color(d))
     .attr('data-id', d => d.id);
   node.append('text').attr('text-anchor', 'middle')
     .attr('dy', d => radius(d) + 13).text(d => d.label);
@@ -277,8 +538,19 @@ function render() {
   for (let i = 0; i < 600 && sim.alpha() > sim.alphaMin(); i++) sim.tick();
   tick();
   fitView(null, {duration: 0});
+  refreshSearch(false);   // goal filter changed the node set — re-scope any live query
   applyModes();
 }
+
+// legend level filter: null = off, '1'..'5' = evidenced rung, 'missing' = dashed nodes
+let levelFilter = null;
+function matchesLevel(n) {
+  if (levelFilter === 'missing') return n.type === 'missing';
+  return n.type !== 'missing' &&
+         Math.min(5, Math.max(0, Math.floor(n.evidenced))) === +levelFilter;
+}
+// search filter: null = off, else the set of node ids still matching the query
+let searchSet = null;
 
 function applyModes() {
   const gap = document.getElementById('gapToggle').checked;
@@ -286,7 +558,10 @@ function applyModes() {
   const nbrs = focusId ? neighborSet(focusId) : null;
   g.selectAll('.node')
     .classed('hot', d => gap && hasGap(d))
-    .classed('dim', d => (gap && !hasGap(d)) || (div && !diverges(d)) || (nbrs && !nbrs.has(d.id)))
+    .classed('dim', d => (gap && !hasGap(d)) || (div && !diverges(d)) ||
+                         (nbrs && !nbrs.has(d.id)) ||
+                         (levelFilter !== null && !matchesLevel(d)) ||
+                         (searchSet !== null && !searchSet.has(d.id)))
     .classed('diverge', d => div && diverges(d))
     .classed('focusring', d => d.id === focusId);
   g.selectAll('.edge')
@@ -294,6 +569,8 @@ function applyModes() {
     .classed('dim', d => {
       if (nbrs && !(d.source.id === focusId || d.target.id === focusId)) return true;
       if (gap && !(hasGap(d.source) || hasGap(d.target))) return true;
+      if (levelFilter !== null && !(matchesLevel(d.source) && matchesLevel(d.target))) return true;
+      if (searchSet !== null && !(searchSet.has(d.source.id) && searchSet.has(d.target.id))) return true;
       return false;
     });
 }
@@ -336,7 +613,7 @@ function drill(id, push) {
     <div class="sub">${n.type === 'missing' ? 'not yet covered' : (n.domain || '')} · weight ${n.weight}${n.convergence ? ` · in ${n.convergence} track${n.convergence > 1 ? 's' : ''}` : ''}</div>
     <h3>Evidenced level</h3>
     <div>${n.evidenced} / 5</div>
-    <div class="bar"><i style="width:${pct}%;background:${n.evidenced >= 3 ? 'var(--strong)' : 'var(--weak)'}"></i></div>
+    <div class="bar"><i style="width:${pct}%;background:${color(n)}"></i></div>
     <h3>Confidence</h3>
     <table><tr><td>self-assessed</td><td>${n.selfConfidence || '—'}</td></tr>
     <tr><td>ai (evidence-based)</td><td>${n.aiConfidence ?? 'unassessed'}</td></tr></table>
@@ -535,8 +812,370 @@ document.getElementById('refBtn').addEventListener('click', () => {
   if (show) { document.getElementById('panel').style.display = 'none'; }
 });
 
+// ---- unified shell: views (PLAN-UX U0) ----
+// Map | Readiness | Divergence | Real estate. Charts are lazy: drawn on first
+// activation, marked dirty on goal change / resize, redrawn only if visible.
+const VIEWS = ['map', 'readiness', 'divergence', 'estate'];
+const chartDirty = {readiness: true, divergence: true, estate: true};
+function drawView(v) {
+  if (v === 'readiness') drawRadarView();
+  else if (v === 'divergence') drawScatterView();
+  else if (v === 'estate') drawTreemapView();
+}
+function setView(v) {
+  document.body.dataset.view = v;
+  document.querySelectorAll('#viewTabs button').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === v));
+  if (v !== 'map' && chartDirty[v]) { drawView(v); chartDirty[v] = false; }
+  if (cmActive) cmClose(false);  // hide, don't burn: it returns on the next visit
+  requestAnimationFrame(() => maybeCoach(v));  // after the chart has painted
+  const p = new URLSearchParams(location.search);
+  if (v === 'map') p.delete('view'); else p.set('view', v);
+  // some browsers refuse history API on file:// — the URL nicety is optional
+  try {
+    history.replaceState(null, '', location.pathname + (p.toString() ? '?' + p : ''));
+  } catch (e) { /* file:// */ }
+}
+function markChartsDirty() {
+  VIEWS.slice(1).forEach(v => chartDirty[v] = true);
+  const v = document.body.dataset.view;
+  if (v !== 'map') { drawView(v); chartDirty[v] = false; }
+  // a goal pick can turn an empty chart into a real one — that render is the
+  // true first contact, so offer the deferred first-touch now
+  requestAnimationFrame(() => maybeCoach(v));
+}
+// a chart element was clicked: land on that topic in the Map view
+function goToMap(id) { setView('map'); drill(id, true); }
+
+function reqGoalsList() {
+  const s = new Set();
+  G.nodes.forEach(n => (n.requirements || []).forEach(r => s.add(r.goal)));
+  return G.goals.filter(gl => s.has(gl.id));
+}
+
+function drawRadarView() {
+  const root = d3.select('#radar');
+  root.selectAll('*').remove();
+  const rg = reqGoalsList();
+  if (!rg.length) {
+    root.append('div').attr('class', 'empty')
+      .text('No roadmaps found under goals/roadmaps/.');
+    return;
+  }
+  const gid = goalSel.value;
+  if (!gid) {
+    const wrap = root.append('div').attr('class', 'empty');
+    wrap.append('div').text('Pick a goal or track to see readiness against its roadmap:');
+    const chips = wrap.append('div').style('margin-top', '10px');
+    rg.forEach(gl => chips.append('span').attr('class', 'chip')
+      .text(gl.title.replace(/ \(track\)$/, '') + (isTrack(gl) ? ' · track' : ''))
+      .on('click', () => { goalSel.value = gl.id; goalSel.dispatchEvent(new Event('change')); }));
+    return;
+  }
+  const axes = [];
+  G.nodes.forEach(n => (n.requirements || []).forEach(r => {
+    if (r.goal === gid) axes.push({
+      name: r.name, required: r.required,
+      evidenced: Math.min(n.evidenced, 5), missing: n.type === 'missing',
+    });
+  }));
+  axes.sort((a, b) => a.name.localeCompare(b.name));
+  if (!axes.length) {
+    root.append('div').attr('class', 'empty').text('No roadmap for this goal yet.');
+    return;
+  }
+  const box = document.getElementById('viewReadiness').getBoundingClientRect();
+  // labels anchor at 1.25 × R from center, then extend up to ~26 chars (~145px)
+  // outward — so the radius must leave 1.25R + LW on each side, not just R
+  const LW = 145;
+  const availW = Math.max(600, Math.min(1200, box.width - 90));
+  let H = Math.max(480, Math.min(760, window.innerHeight - 230));
+  const R = Math.max(130, Math.min((H - 40) / 2.5, (availW - 2 * LW) / 2.5));
+  H = Math.min(H, 2.5 * R + 60);   // don't keep height the radius can't use
+  const W = 2.5 * R + 2 * LW;
+  const cx = W / 2, cy = H / 2 + 6, MAX = 5;
+  const svgc = root.append('svg').attr('width', W).attr('height', H);
+  const angle = i => (Math.PI * 2 * i) / axes.length - Math.PI / 2;
+  const pt = (i, v) => [cx + Math.cos(angle(i)) * R * (v / MAX),
+                        cy + Math.sin(angle(i)) * R * (v / MAX)];
+  for (let lvl = 1; lvl <= MAX; lvl++) {
+    svgc.append('polygon')
+      .attr('points', axes.map((_, i) => pt(i, lvl).join(',')).join(' '))
+      .attr('fill', 'none').attr('stroke', 'var(--line)');
+  }
+  axes.forEach((a, i) => {
+    const [x, y] = pt(i, MAX);
+    svgc.append('line').attr('x1', cx).attr('y1', cy).attr('x2', x).attr('y2', y)
+      .attr('stroke', 'var(--line)');
+    const [lx, ly] = pt(i, MAX + 1.25);
+    svgc.append('text').attr('x', lx).attr('y', ly)
+      .attr('text-anchor', lx < cx - 4 ? 'end' : lx > cx + 4 ? 'start' : 'middle')
+      .attr('font-size', '10.5px')
+      .attr('fill', a.missing ? 'var(--hot)' : 'var(--muted)')
+      .text(a.name.length > 26 ? a.name.slice(0, 24) + '…' : a.name);
+  });
+  svgc.append('polygon')
+    .attr('points', axes.map((a, i) => pt(i, a.required).join(',')).join(' '))
+    .attr('fill', 'none').attr('stroke', 'var(--hot)')
+    .attr('stroke-width', 1.5).attr('stroke-dasharray', '5 4');
+  svgc.append('polygon')
+    .attr('points', axes.map((a, i) => pt(i, a.evidenced).join(',')).join(' '))
+    .attr('fill', 'var(--lvl4)').attr('fill-opacity', .25)
+    .attr('stroke', 'var(--lvl4)').attr('stroke-width', 1.5);
+}
+
+function drawScatterView() {
+  const pts = G.nodes.filter(n =>
+    n.type === 'topic' && n.selfConfidence > 0 && n.aiConfidence != null);
+  const unassessed = G.nodes.filter(n =>
+    n.type === 'topic' && n.selfConfidence > 0 && n.aiConfidence == null).length;
+  const root = d3.select('#scatter');
+  root.selectAll('*').remove();
+  if (!pts.length) {
+    // Ghosted, labeled EXAMPLE scatter. Divergence is the one chart the U2
+    // demo pack can't fill (demo assessments are excluded by locked design),
+    // so its empty state teaches the shape with illustration pixels that
+    // never touch real data or the real chart machinery. The example svg is
+    // nested in a wrapper div so CM_READY's '#scatter > svg' check ignores
+    // it — the coach-mark still waits for the first real render.
+    const wrap = root.append('div').style('padding', '6px 4px');
+    wrap.append('div').style('font-size', '14px').style('line-height', '1.7').html(
+      '<b>This chart waits for quiz evidence.</b><br>' +
+      'Each dot = one topic, how it feels vs what quizzes proved.<br>' +
+      'Below the dashed line = confidence ahead of evidence.<br>' +
+      'Say "quiz me" and your first real dot lands here.' +
+      (unassessed ? `<br><span style="color:var(--muted)">${unassessed} topics ` +
+                    'carry self-confidence, awaiting proof.</span>' : ''));
+    const eW = 470, eH = 300, eM = {t: 26, r: 16, b: 34, l: 38};
+    const ex2 = d3.scaleLinear([0, 5], [eM.l, eW - eM.r]);
+    const ey2 = d3.scaleLinear([0, 5], [eH - eM.b, eM.t]);
+    const ex = wrap.append('svg').attr('width', eW).attr('height', eH)
+      .style('margin-top', '10px').style('opacity', .85);
+    ex.append('g').attr('transform', `translate(0,${eH - eM.b})`)
+      .attr('class', 'axis').call(d3.axisBottom(ex2).ticks(5));
+    ex.append('g').attr('transform', `translate(${eM.l},0)`)
+      .attr('class', 'axis').call(d3.axisLeft(ey2).ticks(5));
+    ex.append('text').attr('x', eW / 2).attr('y', eH - 4).attr('text-anchor', 'middle')
+      .attr('font-size', '10.5px').attr('fill', 'var(--muted)').text('self-confidence');
+    ex.append('text').attr('transform', `translate(11,${eH / 2}) rotate(-90)`)
+      .attr('text-anchor', 'middle').attr('font-size', '10.5px')
+      .attr('fill', 'var(--muted)').text('AI-assessed level');
+    ex.append('line').attr('x1', ex2(0)).attr('y1', ey2(0))
+      .attr('x2', ex2(5)).attr('y2', ey2(5))
+      .attr('stroke', 'var(--line)').attr('stroke-dasharray', '4 4');
+    ex.append('text').attr('x', eW - eM.r).attr('y', eM.t - 10).attr('text-anchor', 'end')
+      .attr('font-size', '11px').attr('font-style', 'italic')
+      .attr('fill', 'var(--muted)').text('example — not your data');
+    [{sx: 4, sy: 2, c: 'var(--hot)', t: 'felt 4, proven 2 = overconfident', end: true},
+     {sx: 2, sy: 3, c: 'var(--lvl4)', t: 'proven ahead of feel'},
+     {sx: 3.6, sy: 3.6, c: 'var(--muted)', t: 'aligned'}].forEach(d => {
+      ex.append('circle').attr('cx', ex2(d.sx)).attr('cy', ey2(d.sy)).attr('r', 6)
+        .attr('fill', d.c).attr('fill-opacity', .3)
+        .attr('stroke', d.c).attr('stroke-dasharray', '3 2');
+      ex.append('text')
+        .attr('x', ex2(d.sx) + (d.end ? -10 : 10)).attr('y', ey2(d.sy) + 4)
+        .attr('text-anchor', d.end ? 'end' : 'start')
+        .attr('font-size', '11px').attr('fill', d.c).text(d.t);
+    });
+    return;
+  }
+  const box = document.getElementById('viewDivergence').getBoundingClientRect();
+  const W = Math.max(520, Math.min(840, box.width - 90));
+  const H = Math.max(460, Math.min(680, window.innerHeight - 230));
+  const M = {t: 14, r: 16, b: 38, l: 38};
+  const x = d3.scaleLinear([0, 5], [M.l, W - M.r]);
+  const y = d3.scaleLinear([0, 5], [H - M.b, M.t]);
+  const svgc = root.append('svg').attr('width', W).attr('height', H);
+  svgc.append('g').attr('transform', `translate(0,${H - M.b})`)
+    .attr('class', 'axis').call(d3.axisBottom(x).ticks(5));
+  svgc.append('g').attr('transform', `translate(${M.l},0)`)
+    .attr('class', 'axis').call(d3.axisLeft(y).ticks(5));
+  svgc.append('text').attr('x', W / 2).attr('y', H - 6).attr('text-anchor', 'middle')
+    .attr('font-size', '11px').attr('fill', 'var(--muted)').text('self-confidence');
+  svgc.append('text').attr('transform', `translate(11,${H / 2}) rotate(-90)`)
+    .attr('text-anchor', 'middle').attr('font-size', '11px')
+    .attr('fill', 'var(--muted)').text('AI-assessed level');
+  svgc.append('line').attr('x1', x(0)).attr('y1', y(0)).attr('x2', x(5)).attr('y2', y(5))
+    .attr('stroke', 'var(--line)').attr('stroke-dasharray', '4 4');
+  svgc.selectAll('circle').data(pts).join('circle')
+    .attr('cx', d => x(d.selfConfidence)).attr('cy', d => y(d.aiConfidence))
+    .attr('r', 5)
+    .attr('fill', d => d.aiConfidence < d.selfConfidence ? 'var(--hot)' : 'var(--lvl4)')
+    .attr('fill-opacity', .75)
+    .style('cursor', 'pointer')
+    .on('click', (e, d) => goToMap(d.id))
+    .append('title')
+    .text(d => `${d.label}: self ${d.selfConfidence}, assessed ${d.aiConfidence}. Click to open in the map.`);
+  svgc.selectAll('text.pt').data(pts).join('text').attr('class', 'pt')
+    .attr('x', d => x(d.selfConfidence) + 7).attr('y', d => y(d.aiConfidence) + 3)
+    .attr('font-size', '10px').attr('fill', 'var(--muted)').text(d => d.label);
+}
+
+// Knowledge real estate: size = topic weight (mass), color = evidenced level
+// (the same tiers as the map legend) — size says where your knowledge lives,
+// color says how much of it is earned. Scroll-wheel semantic zoom: wheeling
+// IN over a region whose cells are too small to read re-tiles that region as
+// its own treemap, recursively (all domains → one domain → a topic's notes);
+// wheeling OUT backs up a level. Click still opens the topic in the map —
+// except at notes depth, where a click opens the note itself.
+let tmState = {level: 'all', dom: null, topic: null};
+const TM_RETILE_AREA = 8000;  // px²: avg cell area below this = "too small to read"
+
+function drawTreemapView() {
+  const topics = G.nodes.filter(n => n.type === 'topic' && n.weight > 0);
+  const rootEl = d3.select('#treemap');
+  rootEl.selectAll('*').remove();
+  const sub = document.getElementById('tmSub');
+  const legend = document.getElementById('tmLegend');
+  if (!topics.length) {
+    rootEl.append('div').attr('class', 'empty').text('No weighted topics yet.');
+    sub.textContent = ''; legend.innerHTML = '';
+    return;
+  }
+  // re-validate the zoom state against current data (goal changes, rebuilds)
+  if (tmState.level === 'domain' && !topics.some(t => (t.domain || 'other') === tmState.dom)) {
+    tmState = {level: 'all', dom: null, topic: null};
+  }
+  if (tmState.level === 'topic') {
+    const t = G.nodes.find(n => n.id === tmState.topic);
+    if (!t || !(t.notes || []).length) tmState = {level: 'all', dom: null, topic: null};
+  }
+  const mode = tmState.level;
+
+  const box = document.getElementById('viewEstate').getBoundingClientRect();
+  const W = Math.max(700, Math.min(1280, box.width - 90));
+  const H = Math.max(500, Math.min(780, window.innerHeight - 230));
+
+  const topicDatum = t => ({name: t.label, id: t.id, value: t.weight, node: t});
+  let data;
+  if (mode === 'all') {
+    const byDomain = d3.group(topics, t => t.domain || 'other');
+    data = {children: [...byDomain].map(([dom, ts]) =>
+      ({name: dom, children: ts.map(topicDatum)}))};
+  } else if (mode === 'domain') {
+    data = {children: topics.filter(t => (t.domain || 'other') === tmState.dom).map(topicDatum)};
+  } else {
+    const t = G.nodes.find(n => n.id === tmState.topic);
+    data = {children: t.notes.map(nt => ({
+      name: nt.title || noteLabel(nt.id), id: nt.id, note: nt,
+      value: Math.max(1, nt.confidence || 1),
+    }))};
+  }
+
+  const root = d3.hierarchy(data).sum(d => d.value).sort((a, b) => b.value - a.value);
+  d3.treemap().size([W, H]).paddingInner(1.5).paddingTop(mode === 'all' ? 17 : 2)(root);
+  const total = root.value;
+  const svgc = rootEl.append('svg').attr('width', W).attr('height', H);
+
+  if (mode === 'all') {
+    svgc.selectAll('g.dom').data(root.children).join('g').attr('class', 'dom')
+      .append('text')
+      .attr('x', d => d.x0 + 4).attr('y', d => d.y0 + 12)
+      .attr('font-size', '10.5px').attr('font-weight', 600)
+      .attr('fill', 'var(--muted)')
+      .text(d => `${d.data.name} — ${(d.value / total * 100).toFixed(0)}%`);
+  }
+
+  const leaf = svgc.selectAll('g.leaf').data(root.leaves()).join('g')
+    .attr('class', 'leaf').attr('transform', d => `translate(${d.x0},${d.y0})`)
+    .style('cursor', 'pointer')
+    .on('click', (e, d) => mode === 'topic'
+      ? viewNote(d.data.id, d.data.note)
+      : goToMap(d.data.id));
+  leaf.append('rect')
+    .attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0)
+    .attr('fill', d => mode === 'topic' ? 'var(--edge)' : color(d.data.node))
+    .attr('fill-opacity', d => mode === 'topic' ? .35 : .7)
+    .attr('stroke', 'var(--panel)').attr('stroke-width', .5)
+    .append('title')
+    .text(d => mode === 'topic'
+      ? `${d.data.name} — self-confidence ${d.data.note.confidence} · ${d.data.note.lastReviewed}. Click to read it.`
+      : `${d.data.name} — level ${d.data.node.evidenced} · ${(d.value / total * 100).toFixed(1)}% of shown weight. Click opens the map; scroll in to dive.`);
+  leaf.filter(d => (d.x1 - d.x0) > 58 && (d.y1 - d.y0) > 15)
+    .append('text')
+    .attr('x', 3).attr('y', 11).attr('font-size', '9.5px').attr('fill', 'var(--ink)')
+    .attr('pointer-events', 'none')
+    .text(d => {
+      const w = d.x1 - d.x0, max = Math.floor(w / 5.4);
+      return d.data.name.length > max ? d.data.name.slice(0, max - 1) + '…' : d.data.name;
+    });
+
+  // scroll-wheel semantic zoom
+  svgc.on('wheel', e => {
+    e.preventDefault();
+    if (e.deltaY > 0) {                       // wheel out: back up one level
+      if (mode === 'topic') tmState = {level: 'domain', dom: tmState.dom, topic: null};
+      else if (mode === 'domain') tmState = {level: 'all', dom: null, topic: null};
+      else return;
+      drawTreemapView();
+      return;
+    }
+    const d = e.target.__data__;              // wheel in: dive into hovered region
+    if (!d || !d.depth) return;
+    if (mode === 'all') {
+      const region = d.depth === 2 ? d.parent : d;
+      const avg = d3.mean(region.leaves(), c => (c.x1 - c.x0) * (c.y1 - c.y0));
+      if (avg < TM_RETILE_AREA) {
+        tmState = {level: 'domain', dom: region.data.name, topic: null};
+        markHintSeen('estate-zoom');  // they did the thing; the tip retires
+        drawTreemapView();
+      }
+    } else if (mode === 'domain') {
+      if ((d.data.node.notes || []).length) {
+        tmState = {level: 'topic', dom: tmState.dom, topic: d.data.id};
+        markHintSeen('estate-zoom');
+        drawTreemapView();
+      }
+    }
+  });
+
+  // breadcrumb + per-level legend
+  const crumb = (label, state) => `<span class="crumb" data-tm="${state}">${label}</span>`;
+  if (mode === 'all') {
+    sub.innerHTML = 'box size = topic weight (share of everything you know) · ' +
+      'color = proven depth, same rungs as the map · scroll in on a crowded area to re-tile it';
+  } else if (mode === 'domain') {
+    sub.innerHTML = `${crumb('all domains', 'all')} › <b>${tmState.dom}</b> · ` +
+      'scroll in on a topic to see its notes · scroll out to back up';
+  } else {
+    const t = G.nodes.find(n => n.id === tmState.topic);
+    sub.innerHTML = `${crumb('all domains', 'all')} › ${crumb(tmState.dom || (t.domain || 'other'), 'domain')} › ` +
+      `<b>${t.label}</b> · notes sized by self-confidence (claimed, not proven — hence no rung colors) · click a note to read it`;
+  }
+  sub.querySelectorAll('[data-tm]').forEach(el => el.addEventListener('click', () => {
+    tmState = el.dataset.tm === 'all'
+      ? {level: 'all', dom: null, topic: null}
+      : {level: 'domain', dom: tmState.dom, topic: null};
+    drawTreemapView();
+  }));
+  const sw = c => `<span class="swatch" style="background:${c}"></span>`;
+  legend.innerHTML = mode === 'topic'
+    ? `<span>${sw('var(--edge)')}note (self-claimed)</span>`
+    : `<span>${sw('var(--edge)')}no rung yet</span>` +
+      [1, 2, 3, 4, 5].map(l => {
+        const names = {1: 'aware', 2: 'comprehend', 3: 'apply', 4: 'fluent', 5: 'mastery'};
+        return `<span>${sw(`var(--lvl${l})`)}${l} ${names[l]}</span>`;
+      }).join('');
+}
+
+document.querySelectorAll('#viewTabs button').forEach(b =>
+  b.addEventListener('click', () => setView(b.dataset.view)));
+window.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+  if (document.getElementById('noteOverlay').style.display === 'flex') return;
+  const i = ['1', '2', '3', '4'].indexOf(e.key);
+  if (i >= 0) setView(VIEWS[i]);
+});
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(markChartsDirty, 150);
+});
+
 svg.on('click', clearFocus);
-goalSel.addEventListener('change', () => { clearFocus(); render(); renderSuggest(); });
+goalSel.addEventListener('change', () => { clearFocus(); render(); renderSuggest(); markChartsDirty(); });
 pathSel.addEventListener('change', () => {
   route = pathSel.value === '' ? null : PATHS[+pathSel.value];
   if (route) {
@@ -548,11 +1187,118 @@ pathSel.addEventListener('change', () => {
 });
 document.getElementById('gapToggle').addEventListener('change', applyModes);
 document.getElementById('divToggle').addEventListener('change', applyModes);
+// legend keys toggle a level filter: fade everything, illuminate that rung
+document.querySelectorAll('#legend [data-level]').forEach(el => {
+  el.addEventListener('click', () => {
+    levelFilter = levelFilter === el.dataset.level ? null : el.dataset.level;
+    document.querySelectorAll('#legend [data-level]').forEach(e =>
+      e.classList.toggle('active', e.dataset.level === levelFilter));
+    applyModes();
+  });
+});
+
+// ---- search: candidates stay illuminated and narrow as you type; ----
+// ---- suggestions rank prefix matches first, then strongest nodes  ----
+const searchBox = document.getElementById('searchBox');
+const searchSugEl = document.getElementById('searchSug');
+let sugHits = [], sugSel = -1;
+
+function searchHits(q) {
+  q = q.trim().toLowerCase();
+  if (!q) return null;
+  return nodes.filter(n => n.label.toLowerCase().includes(q))
+    .sort((a, b) => {
+      const ap = a.label.toLowerCase().startsWith(q), bp = b.label.toLowerCase().startsWith(q);
+      if (ap !== bp) return ap ? -1 : 1;
+      return (b.weight || 0) - (a.weight || 0);
+    });
+}
+
+function refreshSearch(showSug) {
+  const hits = searchHits(searchBox.value);
+  searchSet = hits === null ? null : new Set(hits.map(h => h.id));
+  sugHits = hits === null ? [] : hits.slice(0, 8);
+  sugSel = -1;
+  if (showSug && sugHits.length) {
+    searchSugEl.innerHTML = sugHits.map((n, i) => {
+      const dot = n.type === 'missing'
+        ? '<span class="dot" style="border:1.5px dashed var(--edge)"></span>'
+        : `<span class="dot" style="background:${color(n)}"></span>`;
+      const meta = n.type === 'missing' ? 'not yet covered' : `lvl ${n.evidenced} · w ${n.weight}`;
+      return `<div class="item" data-i="${i}">${dot}${n.label}<span class="meta">${meta}</span></div>`;
+    }).join('');
+    searchSugEl.style.display = 'block';
+    searchSugEl.querySelectorAll('.item').forEach(el =>
+      el.addEventListener('mousedown', e => { e.preventDefault(); pickSug(+el.dataset.i); }));
+  } else {
+    searchSugEl.style.display = 'none';
+  }
+}
+
+function pickSug(i) {
+  const n = sugHits[i];
+  if (!n) return;
+  searchBox.value = n.label;
+  searchSugEl.style.display = 'none';
+  searchSet = null;   // exact match found: hand off to drill, which lights its network
+  searchBox.blur();
+  drill(n.id, true);
+}
+
+searchBox.addEventListener('input', () => { refreshSearch(true); applyModes(); });
+searchBox.addEventListener('focus', () => { if (searchBox.value) { refreshSearch(true); applyModes(); } });
+searchBox.addEventListener('blur', () => { searchSugEl.style.display = 'none'; });
+searchBox.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!sugHits.length) return;
+    sugSel = (sugSel + (e.key === 'ArrowDown' ? 1 : -1) + sugHits.length) % sugHits.length;
+    searchSugEl.querySelectorAll('.item').forEach((el, i) => el.classList.toggle('sel', i === sugSel));
+  } else if (e.key === 'Enter') {
+    pickSug(sugSel >= 0 ? sugSel : 0);
+  } else if (e.key === 'Escape') {
+    searchBox.value = '';
+    refreshSearch(false);
+    applyModes();
+    searchBox.blur();
+  }
+});
+// staleness made visible (PLAN-UX U3): an open tab states how old its data is,
+// so "why isn't my new note here" self-diagnoses. Ticks each minute; hover for
+// the exact time. generated_at is the wall-clock export stamp (local ISO).
+(function () {
+  const el = document.getElementById('dataAge');
+  const stamp = window.GRAPH && (GRAPH.generated_at || GRAPH.generated);
+  if (!el || !stamp) return;
+  const t = new Date(stamp);
+  if (isNaN(t)) return;
+  el.title = 'map data generated ' + t.toLocaleString() + ' — reload after a skill runs to pick up changes';
+  const tick = () => {
+    const mins = Math.max(0, Math.round((Date.now() - t.getTime()) / 60000));
+    el.textContent = mins < 1 ? 'data generated just now'
+      : mins < 60 ? 'data generated ' + mins + ' min ago'
+      : mins < 2880 ? 'data generated ' + Math.round(mins / 60) + ' h ago'
+      : 'data generated ' + Math.round(mins / 1440) + ' days ago';
+  };
+  tick();
+  setInterval(tick, 60000);
+})();
 render();
-// deep link: dashboard charts link here as ?focus=<topic-id> — open that
-// topic's drill-down exactly as if its node had been clicked.
-const focusParam = new URLSearchParams(location.search).get('focus');
-if (focusParam && G.nodes.some(n => n.id === focusParam)) drill(focusParam, true);
+// deep links: ?view=<name> opens that view (the old dashboard.html redirects
+// here with ?view=readiness); ?focus=<topic-id> opens that topic's drill-down
+// in the Map view exactly as if its node had been clicked.
+const params = new URLSearchParams(location.search);
+const viewParam = params.get('view');
+if (viewParam && VIEWS.includes(viewParam)) setView(viewParam);
+const focusParam = params.get('focus');
+if (focusParam && G.nodes.some(n => n.id === focusParam)) { setView('map'); drill(focusParam, true); }
+// /start supersession (PLAN-UX U2, locked): the tour just taught the map on the
+// user's own data, so the map coach-mark must not re-teach it seconds later.
+// The tour is the only writer of this param, and map is the ONLY hint it may
+// retire — every other view/skill keeps its own first touch.
+if (params.get('toured') === '1') localStorage.setItem('sb-hint-map', '1');
+// first-visit coach-mark for the landing view (setView covers later switches)
+requestAnimationFrame(() => maybeCoach(document.body.dataset.view));
 }
 </script>
 </body>

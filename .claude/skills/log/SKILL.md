@@ -30,5 +30,16 @@ Turn the user's freeform account into a validated note. The CLI is the only writ
      --topics "<a,b,c>" --goals "<g1,g2>" --source study-session \
      --confidence <n> --importance <n> --body "<body>"
    ```
-5. Confirm with the created path. If `brain add` rejects the note, fix the draft and
-   retry — never write files into `knowledge/` directly.
+5. If `brain add` rejects the note, fix the draft and retry — never write files
+   into `knowledge/` directly.
+
+**Finish every run (ux.md #2/#3/#6 — one command per tool call):**
+1. `.venv/bin/python -m brain ingest`, then `.venv/bin/python -m brain graph` —
+   the user never learns regeneration exists.
+2. Snapshot: `git add` the new note, then
+   `git commit -m "snapshot: log: <note title>"`. No git? One line: snapshot
+   skipped, notes still saved.
+3. End with the receipt block (docs/ux.md #2): the note id + topics it landed
+   with; self-confidence stated as claimed, not proven; "map data refreshed —
+   reload the tab"; "saved a local snapshot — nothing leaves your machine";
+   next action (usually: quiz this topic when you're ready to prove it).

@@ -59,6 +59,17 @@ def test_export_writes_file_uri_safe_data_js(sandbox):
     assert (sandbox / "ui" / "graph.json").exists()
 
 
+def test_export_stamps_generation_time(sandbox):
+    import json
+
+    export(today=TODAY)
+    graph = json.loads((sandbox / "ui" / "graph.json").read_text(encoding="utf-8"))
+    # date stays deterministic for tooling; the wall-clock stamp powers the
+    # UI header's "data generated <ago>" staleness line (U3)
+    assert graph["generated"] == TODAY.isoformat()
+    assert "T" in graph["generated_at"]
+
+
 def test_export_bundles_note_bodies_for_viewer(sandbox):
     import json
 

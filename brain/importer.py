@@ -4,9 +4,11 @@ First-class: Joplin "MD - Markdown + Front Matter" exports (title/created/update
 tags in frontmatter, notes organized in notebook folders). Also handles plain
 markdown and Obsidian vaults (no frontmatter; [[links]] preserved as-is).
 
-Imported notes are conservative by design: confidence 2, no goal links, and
-source "import" — that combination is the flag the /ingest skill uses to find
-notes awaiting AI enrichment (topic suggestions, goal alignment).
+Imported notes land at confidence 1 (awareness) — you have the material but
+haven't necessarily internalized it. The AI enrichment pass promotes a note to
+2 when its body shows real engagement. Combined with source "import" and no goal
+links, that is the flag the /ingest skill uses to find notes awaiting enrichment
+(topic suggestions, goal alignment, confidence judgment).
 """
 from __future__ import annotations
 
@@ -69,7 +71,7 @@ def import_dir(
     src: Path,
     domain: str | None = None,
     dry_run: bool = False,
-    confidence: int = 2,
+    confidence: int = 1,
     importance: int = 2,
 ) -> ImportResult:
     cfg = load_config()

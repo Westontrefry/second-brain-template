@@ -18,6 +18,7 @@ domains:
   - cloud
   - career
   - projects
+  - gen-ed
 
 sources:
   - study-session
@@ -26,6 +27,7 @@ sources:
   - import
   - project
   - quiz
+  - demo   # starter-pack notes (brain demo --install|--remove); never assessed
 
 embedding:
   model: sentence-transformers/all-MiniLM-L6-v2

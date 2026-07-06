@@ -40,8 +40,12 @@ def _rewrite_frontmatter(path: Path, updates: dict) -> None:
 
 
 def assess(topic: str, level: float, rationale: str, evidence_ids: list[str],
-           today: dt.date | None = None) -> list[Path]:
-    """Record an evidence-based level for a topic on the notes that evidence it."""
+           today: dt.date | None = None, source: str | None = None) -> list[Path]:
+    """Record an evidence-based level for a topic on the notes that evidence it.
+
+    `source` (optional) tags which skill produced the assessment, e.g. "quiz" or
+    "debrief". It is written only when given, so legacy sourceless events stay as
+    they are; first-touch detection keys off it (see brain/first_touch.py)."""
     today = today or dt.date.today()
     if not evidence_ids:
         raise ValueError("assessment requires at least one evidence note id")
@@ -65,13 +69,33 @@ def assess(topic: str, level: float, rationale: str, evidence_ids: list[str],
             "last_assessed": today.isoformat(),
         })
     from .events import append_event
-    append_event("assess", topic=topic, level=level, rationale=rationale,
-                 evidence=evidence_ids)
+    fields = dict(topic=topic, level=level, rationale=rationale, evidence=evidence_ids)
+    if source:
+        fields["source"] = source
+    append_event("assess", **fields)
     return paths
 
 
-def log_exposure(topic: str, today: dt.date | None = None) -> list[Path]:
-    """Record a review event on every note carrying the topic."""
+def set_confidence(note_id: str, level: int) -> Path:
+    """Manually override a note's self/observed `confidence` (the awareness->known
+    rating). Use this to correct a level the AI misjudged at ingest. Does NOT touch
+    `ai_confidence` — if the note was quiz-assessed, that evidence-based score still
+    governs the displayed level by design (re-quiz to change it)."""
+    if not isinstance(level, int) or isinstance(level, bool) or not 1 <= level <= 5:
+        raise ValueError("level must be an integer 1-5")
+    path = _find_note(note_id)
+    _rewrite_frontmatter(path, {"confidence": level})
+    from .events import append_event
+    append_event("set-confidence", note=note_id, level=level)
+    return path
+
+
+def log_exposure(topic: str, today: dt.date | None = None,
+                 source: str | None = None) -> list[Path]:
+    """Record a review event on every note carrying the topic.
+
+    `source` (optional) tags the producing skill, e.g. "review" (written only when
+    given). First-touch detection keys off it (see brain/first_touch.py)."""
     today = today or dt.date.today()
     updated = []
     for path in sorted(knowledge_dir().rglob("*.md")):
@@ -86,5 +110,8 @@ def log_exposure(topic: str, today: dt.date | None = None) -> list[Path]:
     if not updated:
         raise ValueError(f"no notes carry topic {topic!r}")
     from .events import append_event
-    append_event("exposure", topic=topic, notes=len(updated))
+    fields = dict(topic=topic, notes=len(updated))
+    if source:
+        fields["source"] = source
+    append_event("exposure", **fields)
     return updated

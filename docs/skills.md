@@ -5,6 +5,40 @@ repo. They are the reasoning layer ($0 — covered by subscription); the CLI is 
 mechanical layer. Skills never write to `knowledge/` directly except the sanctioned
 enrichment edit (see [architecture.md](architecture.md) invariant 2).
 
+**First-touch explainers:** /quiz, /review, /ingest, /path, and /debrief each start
+by running `brain first-touch <skill>` — the first time a user ever runs the skill it
+prints a one-paragraph explainer the skill prepends to its reply, then never again.
+Detection is read-only, derived from state the skill itself changes on its first run
+(source-tagged events, an imported note, a pathway overlay), so there is no "seen"
+flag anywhere; wiping the data honestly resets the guidance (ux.md #5, #7). The
+explainer never asks a question or adds a message — the skill proceeds in the same
+turn (ux.md #4, #9).
+
+**Skills fail soft (ux.md #8):** the known failure modes — stale or missing
+index (`brain.db` is disposable), missing map data — have deterministic fixes
+(`brain ingest`, `brain graph`), so every skill applies the fix itself and
+mentions it in one line rather than surfacing an error. `brain doctor` exists
+for whatever can't be self-healed; users should never meet a traceback for a
+known mode.
+
+**Every write-path skill ends the same way** (/log, /quiz, /review, /debrief,
+/ingest, /path): it refreshes the derived views itself (`brain ingest` +
+`brain graph` — you never run regeneration), commits a labeled **local
+snapshot** ("nothing leaves your machine"; skipped with a note if git is
+absent), and closes with the receipt block defined in [ux.md](ux.md) #2 —
+what changed, every number's before → after with claimed vs proven labeled,
+"map data refreshed — reload the tab", and the one next action.
+
+## /start — guided first-run tour (built)
+Offered automatically when the brain is empty, goal-less, or never quizzed
+(state-triggered, every step skippable). One conversation: pick a goal
+(shipped roadmaps first, free text as the escape), log one sentence, take a
+two-question micro-quiz on that same note, then read the map on your own data.
+Forks to /ingest if you have old notes; offers `brain demo --install` if you
+don't, so the map is never empty. The micro-quiz always targets your own first
+note, never demo content. Completing the map step retires the Map coach-mark
+(and only that one) — the tour just taught it.
+
 ## /log — capture (built)
 Say what you studied/built/struggled with, even one sentence. Creates a validated,
 goal-linked note via `brain add`. Infers self-confidence from your language and
@@ -12,8 +46,10 @@ preserves struggle markers (they're negative evidence for gap analysis).
 
 ## /ingest — bulk import + enrichment (built)
 Point it at an export folder (Joplin first-class). Runs `brain import`, then the
-enrichment pass over imported notes: real topics, goal links, importance. Never
-touches confidence, ai_confidence, or note bodies.
+enrichment pass over imported notes: real topics, goal links, importance, plus two
+sanctioned judgments — confidence 1 (awareness) vs 2 (engaged) from the note body,
+and a trailing `## Related` wikilinks section (the only body edit). Never touches
+ai_confidence or any other body content.
 
 ## /query — RAG answers (built)
 Ask anything. Searches the knowledge base and answers in two sections:
@@ -24,6 +60,9 @@ Ask anything. Searches the knowledge base and answers in two sections:
 Generates questions at the boundary of your evidence (one rubric level above what's
 evidenced, targeting thin spots). Classifies answers against `rubrics/depth.yaml`
 with quotes and writes ai_confidence via `brain assess` — the only path that sets it.
+Every quiz also leaves a session note (`source: quiz` — questions, answers,
+classifications, same shape as /debrief's) cited as evidence in the assessment, so
+each score has a clickable artifact on the map. No extra step; it just happens.
 
 ## /review — spaced review (built)
 Surfaces weak-but-important topics (plus stale ones), drills them with active recall
@@ -46,3 +85,9 @@ Give it a free-text objective ("FAANG interview prep"); it compiles a route from
 your knowledge + roadmaps into `ui/paths/<slug>.json` — ordered nodes with strength
 statuses plus a suggestions array — which the UI renders as a highlighted route with
 the suggestions tab alongside.
+
+## /context — learning-state export (built)
+Wraps `brain context`: a one-screen YAML summary of tracks, readiness, and top
+gaps, ready to paste into any AI assistant. Scope with a track or goal
+(`/context gcp-cdl`). Topic names and states only — no note contents.
+

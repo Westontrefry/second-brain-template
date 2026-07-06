@@ -21,7 +21,9 @@ def test_imported_track_joins_goal_dropdown(sandbox):
     import_resource(FIXTURE, slug="adv-ds")
     g = build(today=TODAY)
     entry = next((e for e in g["goals"] if e["id"] == "adv-ds"), None)
-    assert entry and "(track)" in entry["title"]
+    assert entry and entry["kind"] == "track"
+    # title stays clean — the UI groups tracks under their own heading
+    assert "(track)" not in entry["title"]
     # roadmap-derived tracks are NOT duplicated in the list
     assert sum(1 for e in g["goals"] if e["id"] == "dsa-interviews") == 1
 

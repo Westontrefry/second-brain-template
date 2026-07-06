@@ -1,7 +1,8 @@
 # CLI reference
 
-All commands: `.venv/bin/python -m brain <command>` from the repo root (or activate
-the venv and use `python -m brain`). Exit code 0 = success. Terms: [glossary.md](glossary.md).
+Install once with `pip install -e .` (inside the venv) and every command is
+`brain <command>` from anywhere. `python -m brain <command>` still works and is
+equivalent. Exit code 0 = success. Terms: [glossary.md](glossary.md).
 
 ## validate
 Check notes against the schema. `brain validate [paths...] [-v]`
@@ -41,8 +42,35 @@ Ranked goal-relevant knowledge gaps. `brain gaps [--goal g] [-n 10]`
 - Score = gap × goal priority × deadline urgency; prereq-blocked topics are
   deprioritized and annotated `(first: <prereq>)`.
 
+## brain (no command)
+The home screen: note/topic counts, index freshness, a "Since last time"
+recap (notes added, levels proven, topics gone stale — from events.jsonl +
+git history, previous activity day included), the top three gaps, and three
+things to try (conversational forms first). Empty brain prints the
+getting-started pointer instead. Usage lives under `brain --help`.
+
+## demo
+Install or remove the starter demo pack. `brain demo --install | --remove`
+- Eight synthetic notes from `examples/starter/` (6 CS on dsa-interviews + 2
+  non-CS for domain-agnosticism), all `source: demo`, never assessed.
+- Install is idempotent; remove deletes every `source: demo` note and re-syncs
+  the index — zero trace (assessment history never cites demo content).
+
 ## status
 Note counts per domain, index size, and freshness (pending changes).
+
+## backup
+Opt-in off-machine copy. `brain backup --setup | brain backup`
+- `--setup` inspects state and prints the walk (git init / gh repo create
+  --private / manual remote add) — it changes nothing and pushes nothing.
+- Bare `brain backup` pushes the current branch to origin: the only command in
+  the product that sends notes anywhere. Everything else is local snapshots.
+
+## doctor
+Seven health checks — python/venv, dependencies, embedding-model cache, note
+validity, index freshness, map-data freshness, git presence — each failure
+paired with the one command that fixes it. Exit 1 if anything needs fixing.
+Automates the routine triage so users never have to.
 
 ## graph
 Export the knowledge graph: `ui/graph.json` (tooling) + `ui/graph.data.js` (bundled
@@ -56,13 +84,16 @@ gap toggle, divergence toggle, pathway picker, node drill-down (ego-network
 focus + detail panel with evidence mix, requirements, notes, breadcrumbs),
 suggestions tab, and a "? reference" tab — a filterable dictionary of every
 skill and CLI command, derived at export time from SKILL.md frontmatter and
-the argument parser (it can't drift from reality).
+the argument parser (it can't drift from reality). The header shows "data
+generated <ago>" so a stale tab self-diagnoses. `--toured` (used by /start
+step 4 only) opens with `?toured=1`, which retires the Map view's first-visit
+coach-mark — the tour just taught the same ground.
 
 ## model import
 Teach the knowledge model a learning resource (the Knowledge Model Engine —
 see [architecture.md](architecture.md)).
 ```
-brain model import ~/Downloads/course-syllabus.md --dry-run    # preview
+brain model import ~/Downloads/course-syllabus.md --dry-run   # preview
 brain model import syllabus.md --track os-course               # slug override
 brain model import some-plan.yaml --adapter roadmap            # roadmap-format file
 ```
@@ -81,7 +112,7 @@ missing — thresholds in config.yaml `model.state`), coverage vs the knowledge
 base, and the most-converged concepts (touched by multiple tracks).
 
 ## readiness
-Explainable per-concept readiness for any track or goal. `brain readiness example-cert`
+Explainable per-concept readiness for any track or goal. `brain readiness gcp-cdl`
 - One line per concept in track order: state, level, and a "because" that
   self-explains (evidence level, staleness age, or `first: <prereq>` blockers).
 - Exit codes: 0 ready (everything mastered/learning), 1 not ready, 2 unknown track.
@@ -102,8 +133,28 @@ brain assess databases --level 4 --evidence 2026-07-02-btree-vs-hash-indexes \
 Writes ai_confidence + rationale + last_assessed onto the evidence notes (which must
 carry the topic); self-assessed `confidence` is never touched. Used by /quiz.
 Also appends one line to `events.jsonl` (append-only history for time-series views).
+Optional `--source <skill>` (e.g. `quiz`, `debrief`) tags the event so first-touch
+detection can tell producing skills apart; written only when given.
+
+## set-confidence
+Manual override for SELF-assessed confidence: `brain set-confidence <note-id> --level <n>`
+- Rewrites the note's `confidence` frontmatter and logs a set-confidence event.
+  Touches only self/observed confidence; ai_confidence stays quiz-only. Use it to
+  correct individual calls the enrichment heuristic got wrong (e.g. a prose-only
+  note you actually wrote yourself).
 
 ## log-exposure
 `brain log-exposure <topic>` — records a review event: bumps exposure_count and
 last_reviewed on every note carrying the topic (refreshes decay). Used by /review.
-Also appends one line to `events.jsonl`.
+Also appends one line to `events.jsonl`. Optional `--source <skill>` (e.g. `review`)
+tags the event for first-touch detection; written only when given.
+
+## first-touch
+`brain first-touch <skill>` — prints a one-time explainer the first time a user
+runs a skill, and nothing thereafter (`skill` ∈ quiz, review, ingest, path, debrief).
+Read-only and self-healing: "first time" is derived from state the skill itself
+changes on its first run — a source-tagged `assess`/`exposure` event (quiz, debrief,
+review), a note with `source: import` (ingest), or an overlay under `ui/paths/`
+(path) — so there is no separate "seen" flag to store. Each skill calls this at the
+start of a run and prepends any output. Detection logic and the explainer copy both
+live in `brain/first_touch.py`.

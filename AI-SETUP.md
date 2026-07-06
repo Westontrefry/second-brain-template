@@ -45,11 +45,14 @@ then do the mechanical work yourself.
 ### 1. Environment
 ```
 python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/python -m brain validate
+.venv/bin/pip install -e .
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/brain validate
 .venv/bin/python -m pytest -q -m "not e2e"
 ```
-Both must pass before you change anything.
+Both must pass before you change anything. (`pip install -e .` also gives the
+bare `brain` command; `python -m brain` remains equivalent. `brain doctor`
+diagnoses a broken environment check by check.)
 
 ### 2. Interview the user
 Ask, minimally:
