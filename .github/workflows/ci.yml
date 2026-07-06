@@ -84,17 +84,17 @@ jobs:
 
   # Dependency CVE scan. Fails only on fixable HIGH/CRITICAL advisories so the
   # gate stays actionable (unfixed CVEs with no upstream patch don't block).
+  # Runs trivy from its official ghcr image rather than trivy-action, whose
+  # self-install step is unreliable on current runners; the image + DB pull
+  # from ghcr.io (GitHub-hosted, no rate limits) instead.
   deps:
     name: Dependency CVE scan (trivy)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          scan-type: fs
-          scan-ref: .
-          scanners: vuln
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          exit-code: "1"
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/repo" \
+            ghcr.io/aquasecurity/trivy:0.65.0 fs \
+            --scanners vuln --severity CRITICAL,HIGH \
+            --ignore-unfixed --exit-code 1 --no-progress /repo
