@@ -170,8 +170,10 @@ your knowledge lives there. The color is the topic's proven depth, one rung
 per color: grey = aware (you have the material), yellow = you understand it,
 green = you've applied it, blue = fluent, purple = mastery. Dashed outline =
 something your goals need that you haven't touched yet. Lines connect topics
-that show up together — or whose notes link to each other (the AI adds those
-cross-references as it organizes new material).
+whose notes link to each other, plus the prerequisites your goals need in order
+(the AI adds those cross-references as it organizes new material). Topics that
+merely show up together share a fainter web — hidden by default so the map stays
+clean and quick, and drawn back in whenever you tick **co-occurrence**.
 
 **How:** say "show my map" (or run `brain ui`). Your browser opens the map.
 Click any dot to zoom into its neighborhood and
@@ -189,7 +191,13 @@ covers **tags** too — type "Google" and it surfaces GCP, Gemini, BigQuery and
 the rest, even though none of them say "Google" in the name. Use the **Goal**
 dropdown to show only what matters for one goal, the **Tag** dropdown to isolate
 a theme's whole sub-network (all your Google topics as their own little map),
-and tick **show gaps** to light up what's missing. Tags are a curated lens you
+and tick **show gaps** to light up what's missing. When the map feels crowded,
+drag the **spread** slider to push everything further apart or pull it back in;
+it opens up the busy core so labels stop overlapping, and touches nothing about
+your data. The map also arrives grouped into **labelled regions** — computer
+science, cloud, career and so on — so related topics cluster together instead
+of piling into one central knot; untick **cluster** if you'd rather see it as
+one free-floating field. Tags are a curated lens you
 edit in `tags.yaml` — group any topics under a name and they're searchable and
 filterable together. You don't have to edit that file yourself: just say "tag
 my AWS stuff" or "add Kubernetes to the Google tag" in a session and the AI
@@ -202,7 +210,7 @@ whole thing turns into **Constellation** mode: deep-space black, faint distant
 stars behind, and every topic drawn as a celestial body that grows grander the
 better you know it — a little four-pointed sparkle when you're just aware of
 something, a sharper six-point burst once you can apply it, a whole spiral
-galaxy at fluency, and a black hole at mastery. (Galaxies and black holes are
+galaxy at fluency, and a blazing quasar at mastery. (Galaxies and quasars are
 rare on purpose — trophies you earn, so most of the sky is sparkles.) Click a
 topic and instead of a flat zoom you *fly into* its cluster —
 the whole field banks and tilts back into perspective as you go, like turning
