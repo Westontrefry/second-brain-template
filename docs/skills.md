@@ -111,3 +111,12 @@ Wraps `brain context`: a one-screen YAML summary of tracks, readiness, and top
 gaps, ready to paste into any AI assistant. Scope with a track or goal
 (`/context gcp-cdl`). Topic names and states only — no note contents.
 
+## /tag — curated topic lenses (built)
+Creates and maintains the tags in `tags.yaml` — the groupings the map's search
+and Tag filter use to connect topics that share a theme but not vocabulary
+("tag my AWS stuff", "add kubernetes to the cloud tag"). The AI proposes members
+from the real on-map topic ids (judgment for entity/brand relations,
+`brain search` for recall), nothing is written without your confirm, and
+`brain graph` rebuilds the UI data. Also does check-ups: unmatched topic ids
+and new topics that plausibly belong to an existing tag.
+

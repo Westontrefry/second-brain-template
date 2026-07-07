@@ -168,7 +168,7 @@ quiz exists.)
 Every topic you've ever taken a note on, drawn as a dot. Bigger dot = more of
 your knowledge lives there. The color is the topic's proven depth, one rung
 per color: grey = aware (you have the material), yellow = you understand it,
-green = you've applied it, teal = fluent, blue = mastery. Dashed outline =
+green = you've applied it, blue = fluent, purple = mastery. Dashed outline =
 something your goals need that you haven't touched yet. Lines connect topics
 that show up together — or whose notes link to each other (the AI adds those
 cross-references as it organizes new material).
@@ -178,14 +178,40 @@ Click any dot to zoom into its neighborhood and
 see the actual notes behind it (a filter box appears when the list is long) —
 and **click any note in that list to read it right there**, nicely formatted —
 math equations, flowchart diagrams, and color-highlighted code all render
-properly — without leaving the map. **Click any color in the legend** to fade
+properly — without leaving the map. Some topics also carry a **Practice**
+list — real problems (with links straight to LeetCode) you can go solve right
+now to earn that node its next color. **Click any color in the legend** to fade
 the rest of the map and light up just the topics at that rung (click it again
 to clear). **Type in the search bar** and the map narrows as you type — every
 topic still matching stays lit while the rest fades, and the suggestion list
-ranks your strongest nodes first; pick one to jump straight into it. Use the
-**Goal** dropdown to show only what matters for one goal, and tick
-**show gaps** to light up what's missing. Prefer dark mode? Hit the 🌙 button
+ranks your strongest nodes first; pick one to jump straight into it. Search
+covers **tags** too — type "Google" and it surfaces GCP, Gemini, BigQuery and
+the rest, even though none of them say "Google" in the name. Use the **Goal**
+dropdown to show only what matters for one goal, the **Tag** dropdown to isolate
+a theme's whole sub-network (all your Google topics as their own little map),
+and tick **show gaps** to light up what's missing. Tags are a curated lens you
+edit in `tags.yaml` — group any topics under a name and they're searchable and
+filterable together. You don't have to edit that file yourself: just say "tag
+my AWS stuff" or "add Kubernetes to the Google tag" in a session and the AI
+proposes the members from your real topics, you approve, and the map picks it
+up. Prefer dark mode? Hit the 🌙 button
 in the header — it remembers your choice and follows you everywhere.
+
+Want the map to feel like a star chart? Hit the ✦ button next to it and the
+whole thing turns into **Constellation** mode: deep-space black, faint distant
+stars behind, and every topic drawn as a celestial body that grows grander the
+better you know it — a little four-pointed sparkle when you're just aware of
+something, a sharper six-point burst once you can apply it, a whole spiral
+galaxy at fluency, and a black hole at mastery. (Galaxies and black holes are
+rare on purpose — trophies you earn, so most of the sky is sparkles.) Click a
+topic and instead of a flat zoom you *fly into* its cluster —
+the whole field banks and tilts back into perspective as you go, like turning
+to face it through space, then levels out when you zoom back out. The distant
+starfield drifts slowly around the centre the whole time, so the sky always
+feels alive. It's the same map underneath (same dots, same clicks), just a
+night-sky skin —
+and like dark mode it's a global setting that sticks and follows you around.
+Hit the button again to come back to the flat map.
 
 One small honesty feature: the header always says how old the picture is
 ("data generated 5 min ago"). If you logged something and don't see it,
@@ -237,19 +263,37 @@ The other buttons (Ingest, Graph, Gaps, Status, Doctor) are the plumbing
 commands, run for you with one click.
 
 Even easier, you rarely have to name a topic at all. Click any dot on the map
-and its card grows its own Quiz, Review, Log, and Expand buttons. Hit Quiz there and it
-quizzes you on that exact topic right away, with nothing to type. Log there and
-it starts the note for you with the topic already filled in. Expand asks the AI
-what related topics you don't have yet and drops them onto the map as dashed
-"to-learn" circles. And when you do
-kick off a quiz or review from the dock itself, it no longer makes you guess a
-topic into a blank box. It suggests your real topics as you type, so you just
-pick one and go.
+and its card grows its own Quiz, Review, Log, and Expand buttons. Hit Quiz there
+and it quizzes you on that exact topic right away, with nothing to type. Log
+there and it starts the note for you with the topic already filled in. Expand
+reaches past what you already have and suggests related topics you have not
+covered yet, so your map can grow at its edges. And when you do kick off a quiz
+or review from the dock itself, it no longer makes you guess a topic into a
+blank box. It suggests your real topics as you type, so you just pick one and go.
 
 One promise holds here too. The panel never writes to your knowledge on its
 own. Every score, every note, every event still goes through the same skill it
 always did, with the same receipts. The button is just a faster way to press
 go.
+
+### Grow the map into what you don't know yet
+The map is honest about a hard thing: you only know what you know. The dashed
+outlines are topics a goal needs that you haven't touched. But there's a bigger
+blind spot — the topics you don't even know you're missing, because they were
+never on the map at all.
+
+That's what the frontier feature is for. Point it at any topic ("expand the
+frontier on graphs", or click a node's **Expand** button on the map) and it
+does the one thing the deterministic system can't: it uses what it knows about
+the whole field to name the relevant topics sitting *outside* your current
+radius. Ask it to "deepen" and it drills into sub-topics; ask it to "broaden"
+and it surfaces the neighbors you skipped. It shows you each one with a reason,
+you pick the ones that belong, and they land on your map as new dashed nodes to
+go study.
+
+It never writes without your yes, it won't propose something you already have,
+and it caps how many it adds at once so your to-do list doesn't drown. Then
+those new gaps show up in "what should I study next?" like everything else.
 
 ---
 
@@ -298,7 +342,7 @@ week 5 before you get there.
 
 **How:** save the syllabus as a markdown file (headings for the weeks, bullet
 points for the topics), then say "teach it this syllabus:
-~/Downloads/course-syllabus.md" (or run `brain model import <file>`, with
+~/Downloads/cop4610-syllabus.md" (or run `brain model import <file>`, with
 `--dry-run` to preview without saving). Topics it already knows get matched
 up (it knows "splay trees" belong to your Trees knowledge); genuinely new
 ones get added to its vocabulary automatically.
@@ -363,7 +407,8 @@ learn, `/quiz` sometimes, and glance at the map. Everything else is there
 when you want it.
 
 **What if something breaks, or a future AI session wants to "improve" things?**
-The repo carries its own guardrails: CLAUDE.md records the working rules and
-integrity invariants, docs/architecture.md records the design decisions, and
-`brain doctor` diagnoses the routine stuff — so a fresh session doesn't
-undo deliberate decisions or leave you stranded.
+The repo carries its own institutional memory: three maintenance skills
+(failure-archaeology, debugging-playbook, confidence-judgment) record every bug
+that's been fixed, every approach that's been rejected, and how the judgment
+calls work — so a fresh session doesn't re-fight old battles or undo
+deliberate decisions.

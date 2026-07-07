@@ -8,7 +8,7 @@ ai_confidence: null
 ai_confidence_rationale: null
 last_assessed: null
 importance: 3
-goals: [example-interviews]
+goals: [dsa-interviews]
 created: 2026-01-01
 last_reviewed: 2026-01-01
 exposure_count: 1

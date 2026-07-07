@@ -43,6 +43,37 @@ def _note_records() -> list[dict]:
     return records
 
 
+def load_tags() -> dict[str, dict]:
+    """Curated tag → topics map from tags.yaml at the repo root (optional).
+
+    A tag is a thematic lens that groups existing topics so search and the tag
+    filter can surface them together even when the topic names share no words.
+    Missing file = no tags; the feature is purely additive."""
+    import yaml
+    path = root() / "tags.yaml"
+    if not path.exists():
+        return {}
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    # The file header says "edit freely", so shape mistakes are expected input:
+    # skip what's malformed with a message, never crash the export over it.
+    if not isinstance(data, dict):
+        print(f"ignoring tags.yaml: expected a mapping of tag ids, got {type(data).__name__}")
+        return {}
+    out: dict[str, dict] = {}
+    for tid, spec in data.items():
+        if not isinstance(spec, dict):
+            print(f"skipping tag {tid!r} in tags.yaml: expected label/topics keys")
+            continue
+        topics = spec.get("topics") or []
+        if isinstance(topics, str):  # a lone topic without list syntax
+            topics = [topics]
+        out[tid] = {
+            "label": spec.get("label", tid),
+            "topics": [str(t).strip().lower() for t in topics],
+        }
+    return out
+
+
 def build(today: dt.date | None = None) -> dict:
     today = today or dt.date.today()
     stats = collect(today)
@@ -168,7 +199,8 @@ def build(today: dt.date | None = None) -> dict:
     TRACK_ACTIONS = {"missing": "no evidence — start here",
                      "weak": "weak — study and practice", "stale": "stale — refresh"}
     model = compile_model(today)
-    aliases = {c.id: c.aliases for c in reg_mod.load().concepts}
+    registry = reg_mod.load()
+    aliases = {c.id: c.aliases for c in registry.concepts}
     required = thresholds()["learning_level"]
     track_entries = []
 
@@ -191,7 +223,11 @@ def build(today: dt.date | None = None) -> dict:
         return cid
 
     for track in model.tracks:
-        if track.adapter == "roadmap":
+        # Skip the in-memory tracks mirroring goals/roadmaps (the goal layer
+        # above already rendered those) — matched by id, NOT by adapter: an
+        # IMPORTED roadmap-format track (brain model import x.yaml) is a real
+        # track that only this layer will ever render.
+        if track.track in goal_resolved:
             continue
         track_entries.append({"id": track.track, "title": track.title,
                               "kind": "track", "priority": 0})
@@ -231,12 +267,61 @@ def build(today: dt.date | None = None) -> dict:
         if cid in nodes:  # missing nodes are keyed by concept id
             nodes[cid]["convergence"] = cs.convergence
 
+    # Practice layer: curated problem links per concept (model/practice/*.yaml,
+    # keyed by concept id or alias) — rendered as a "Practice" list in the
+    # node drill-down. Pure UI convenience, never evidence: readiness, gaps,
+    # and weights ignore it; a problem counts only when a note about solving
+    # it lands.
+    import yaml
+    practice_dir = root() / "model" / "practice"
+    for pfile in sorted(practice_dir.glob("*.yaml")) if practice_dir.is_dir() else []:
+        pdata = yaml.safe_load(pfile.read_text(encoding="utf-8")) or {}
+        for ref, problems in pdata.items():
+            # registry.resolve, not model.resolve_ref: the latter only knows
+            # refs that appear in tracks, while a practice key may be any
+            # concept id or alias. A roadmap topic the registry never seeded
+            # is still a model concept (an "extra", keyed by slug) — accept
+            # those too, the same rule compile_model applies to track refs.
+            pcid = registry.resolve(str(ref))
+            if pcid is None and slugify(str(ref)) in model.concepts:
+                pcid = slugify(str(ref))
+            if pcid is None or pcid not in model.concepts:
+                print(f"practice: unknown concept {ref!r} in {pfile.name} — skipped")
+                continue
+            nodes[concept_node(pcid)].setdefault("practice", []).extend(
+                {"name": p.get("name", ""), "url": p.get("url", "")}
+                for p in (problems or []))
+
+    # Tag layer: a curated lens grouping topics (tags.yaml). Attach each tag to
+    # every node whose id is one of its topics, so search and the tag filter can
+    # surface a whole theme (e.g. "Google" → gcp, gemini, bigquery…) that the
+    # topic names alone would never connect.
+    tags = load_tags()
+    topic_tags: dict[str, list[str]] = {}
+    for tid, spec in tags.items():
+        for topic in spec["topics"]:
+            topic_tags.setdefault(topic, []).append(tid)
+    tag_counts: Counter = Counter()
+    for nid, n in nodes.items():
+        n["tags"] = sorted(set(topic_tags.get(nid.lower(), [])))
+        for t in n["tags"]:
+            tag_counts[t] += 1
+    # Unmatched topics stay ignored by design, but silently: a typo'd id would
+    # read as the tag being broken. Name the leftovers at export time.
+    known = {nid.lower() for nid in nodes}
+    for tid, spec in tags.items():
+        unmatched = [t for t in spec["topics"] if t not in known]
+        if unmatched:
+            print(f"tag {tid!r}: {len(unmatched)} topic(s) not on the map: {', '.join(unmatched)}")
+
     return {
         "suggestions": suggestions,
         "generated": today.isoformat(),
         "goals": [{"id": g["id"], "title": g["title"], "kind": "goal",
                    "priority": g["priority"]}
                   for g in goals.values()] + track_entries,
+        "tags": [{"id": tid, "label": spec["label"], "count": tag_counts.get(tid, 0)}
+                 for tid, spec in tags.items()],
         "nodes": [
             {**n, "goals": sorted(n["goals"]),
              "domain": n["domains"].most_common(1)[0][0] if n["domains"] else None,
