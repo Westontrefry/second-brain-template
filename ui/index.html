@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Second Brain</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="stylesheet" href="katex/katex.min.css">
 <link rel="stylesheet" href="hljs-github.min.css" id="hljsCss">
 <style>
@@ -70,6 +71,8 @@
   header { display:flex; gap:14px; align-items:center; padding:10px 16px;
            border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
   header h1 { font-size:15px; font-weight:600; margin:0 8px 0 0; }
+  header .brand { display:flex; align-items:center; gap:8px; }
+  header .brandmark { width:24px; height:24px; border-radius:6px; display:block; flex:none; }
   header label { font-size:12.5px; color:var(--muted); display:flex; gap:5px; align-items:center; }
   select { font:inherit; font-size:12.5px; padding:2px 4px; }
   #legend { margin-left:auto; display:flex; gap:6px; font-size:12px; color:var(--muted); }
@@ -295,7 +298,7 @@
 </head>
 <body data-view="map">
 <header>
-  <h1>Second Brain</h1>
+  <span class="brand"><img class="brandmark" src="logo.svg" alt="Second Brain logo" width="24" height="24"><h1>Second Brain</h1></span>
   <nav id="viewTabs">
     <button data-view="map" class="active" title="press 1">Map</button>
     <button data-view="readiness" title="press 2">Readiness</button>
