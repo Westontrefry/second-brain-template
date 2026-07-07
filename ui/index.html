@@ -27,7 +27,14 @@
   body.constellation #starfield { display:block; }
   #starfield canvas { position:absolute; top:50%; left:50%; transform-origin:center center;
                       transform:translate(-50%,-50%) perspective(1600px) rotateX(var(--sf-tilt,0deg)) rotate(var(--sf-rot,0deg));
-                      will-change:transform; }
+                      will-change:transform;
+                      /* Fade the plane's stars to nothing well inside its own rectangle, in the
+                         plane's (pre-transform) space, so once it tilts/rotates/pans there is no
+                         rectangular edge to reach — the field just dissolves into deep space. This
+                         is what actually kills the visible "plane border", which the per-star alpha
+                         fade could not (faint stars still reached the canvas edge). */
+                      -webkit-mask-image:radial-gradient(closest-side,#000 58%,rgba(0,0,0,0) 88%);
+                      mask-image:radial-gradient(closest-side,#000 58%,rgba(0,0,0,0) 88%); }
   /* Ambient drift: the starfield slowly rotates around the view centre (≈ the
      focused cluster), a gentle star-trail time-lapse so the sky feels alive.
      The clip stays on #starfield (axis-aligned); only this inner layer spins,
@@ -37,6 +44,9 @@
             animation:sfDrift 200s linear infinite; }
   @keyframes sfDrift { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { #sfSpin { animation:none; } }
+  /* Pause the ambient starfield rotation while panning/zooming/dragging — one less
+     large layer to re-composite mid-gesture. Resumes a beat after motion stops. */
+  body.fxsuspend #sfSpin { animation-play-state:paused; }
   /* Lift the graph above the starfield — but only in constellation, and keep
      the detail panel above the (transparent) SVG so its links stay clickable. */
   body.constellation #graph { position:relative; z-index:1; }
@@ -62,6 +72,33 @@
   body.constellation .focusring .star { stroke:#378ADD; stroke-width:2px; }
   .star-twinkle { animation:twinkle var(--tw,3s) ease-in-out infinite alternate; }
   @keyframes twinkle { from { opacity:.5; } to { opacity:1; } }
+  /* Perf: a twinkling star animates its opacity every frame forever. Combined with
+     the drop-shadow glow that means re-running a blur on each one continuously —
+     a repaint antipattern that makes the idle map feel heavy. Drop the filter on
+     twinklers so their animation is compositor-cheap; steady stars keep the glow. */
+  body.constellation .star-twinkle { filter:none; }
+  /* Render-cost guard. The per-star drop-shadow glow and twinkle are cheap at
+     rest but re-rasterise every star on every pan/zoom/drag frame (SVG filters
+     aren't GPU-composited), which is what makes a big constellation feel rough.
+     While a gesture or the sim is live we shed both, then restore a beat after it
+     stops — the still map looks identical. !important beats the inline glow that
+     celestialBody() paints on galaxy cores and quasars. */
+  body.constellation.fxsuspend .star { filter:none !important; }
+  body.constellation.fxsuspend .star-twinkle { animation-play-state:paused; }
+  /* Simplify during motion: hide the ~1,500 edges while panning/zooming/dragging
+     so the browser rasterises far fewer elements each frame (both skins); they snap
+     back a beat after motion stops. Labels stay up — they're the cheap part and
+     losing them mid-move makes the map unreadable. Toggling display doesn't flash
+     the way a composited-layer promote/demote does. */
+  body.fxsuspend .edge { display:none; }
+  /* While diving (graph pitched), don't clip #graph to its viewport rectangle —
+     otherwise the tilted clip edge slices content along a straight line (the
+     plane-edge cutoff). Only active mid-dive; flat view clips normally. */
+  body.diving #graph { overflow:visible; }
+  /* Domain region watermark — a faint label behind each cluster. */
+  .domlabeltext { fill:var(--muted); opacity:.13; font-size:38px; font-weight:800;
+                  letter-spacing:3px; text-transform:uppercase; pointer-events:none; }
+  body.constellation .domlabeltext { fill:#8b93c8; opacity:.16; }
   #constBtn.active { color:var(--link); border-color:var(--link); }
   * { box-sizing:border-box; }
   select, input { background:var(--panel); color:inherit; }
@@ -320,6 +357,11 @@
   </label>
   <label class="maponly"><input type="checkbox" id="gapToggle"> show gaps</label>
   <label class="maponly"><input type="checkbox" id="divToggle"> divergence</label>
+  <label class="maponly" title="also draw the faint links between topics that appear together — off keeps the map light and quick"><input type="checkbox" id="cooccurToggle"> co-occurrence</label>
+  <label class="maponly" title="group topics into labelled domain regions (computer science, cloud, career…) instead of one field"><input type="checkbox" id="clusterToggle" checked> cluster</label>
+  <label class="maponly" id="spreadCtl" title="how far the map spreads apart">spread
+    <input type="range" id="spreadSlider" min="0.6" max="2.5" step="0.1" value="1" style="width:84px; vertical-align:middle;">
+  </label>
   <span class="helpBtn maponly" data-help="map" title="what am I looking at?">?</span>
   <button id="cockBtn" title="drive quiz / log / review from here"><span class="pip"></span>Cockpit</button>
   <button id="refBtn" style="font:inherit; font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer;">reference key</button>
@@ -583,7 +625,17 @@ const g = svg.append('g');
 // descendants, so only the append/route sites target gRot.
 const gRot = g.append('g').attr('id', 'rot');
 const routeEl = gRot.append('path').attr('id', 'route');
-const zoom = d3.zoom().scaleExtent([0.08, 4]).on('zoom', e => g.attr('transform', e.transform));
+// Render-cost guard: shed the expensive per-star filters/animations (see the
+// .fxsuspend CSS) while the view is in motion, restore a beat after it stops.
+// fxSuspend is idempotent; fxRelease debounces so back-to-back gestures don't flicker.
+let fxTimer = null;
+function fxSuspend() { if (fxTimer) { clearTimeout(fxTimer); fxTimer = null; } document.body.classList.add('fxsuspend'); }
+function fxRelease(delay = 180) { if (fxTimer) clearTimeout(fxTimer); fxTimer = setTimeout(() => { document.body.classList.remove('fxsuspend'); fxTimer = null; }, delay); }
+
+const zoom = d3.zoom().scaleExtent([0.04, 4])
+  .on('start', fxSuspend)
+  .on('zoom', e => g.attr('transform', e.transform))
+  .on('end', () => fxRelease());
 svg.call(zoom);
 
 // Fit the camera to a set of node ids (or all nodes). Pass avail < W when the
@@ -597,7 +649,7 @@ function fitView(ids, {duration = 600, padding = 70, avail = W} = {}) {
     x0 = Math.min(x0, n.x - r); y0 = Math.min(y0, n.y - r);
     x1 = Math.max(x1, n.x + r); y1 = Math.max(y1, n.y + r);
   });
-  const k = Math.max(0.08, Math.min(2,
+  const k = Math.max(0.04, Math.min(2,
     (avail - 2 * padding) / (x1 - x0), (H - 2 * padding) / (y1 - y0)));
   const t = d3.zoomIdentity
     .translate(avail / 2 - k * (x0 + x1) / 2, H / 2 - k * (y0 + y1) / 2)
@@ -632,6 +684,45 @@ const tagById = Object.fromEntries((G.tags || []).map(t => [t.id, t]));
 
 let nodes = [], links = [], sim = null, focusId = null, crumbs = [];
 
+// Node-count-adaptive spread. The force constants were tuned for an early ~120-node
+// graph; by 578 nodes the fixed charge could no longer counter the accumulated link
+// pull, so the field collapsed into a central blob — and that overcrowded centre
+// never settled (collide radii overlapped everywhere, forces fought forever, stars
+// jiggled). We scale charge strength and link distance by ~sqrt(N / 120): ≈1.0 at the
+// old scale and ≈2.2 at 578. The max(1, …) floor means small or goal-filtered graphs
+// are left exactly as they were (still tight, not sparse). `userSpread` is the manual
+// slider multiplier on top (1 = adaptive default).
+let userSpread = 1;
+// Co-occurrence edges (topics that merely appear together — 56% of all links) are
+// kept in the force sim so the layout is unchanged, but not drawn by default: they
+// are the faint background web that made a big map both busy and slow to paint. The
+// toggle reveals them. prereq + wikilink (the meaningful links) always render.
+let showCooccur = false;
+const spreadK = () => Math.max(1, Math.sqrt(nodes.length / 120)) * userSpread;
+// Degree-scaled repulsion: the dense interview/system-design core is a genuinely
+// interconnected clique that a force layout collapses into a hairball. Rather than
+// delete edges (which detaches the sparse periphery), we make high-degree hubs repel
+// harder — the core inflates and breathes while thinly-linked periphery nodes keep
+// the baseline and stay put. sqrt keeps the biggest hubs from flying off. `degree`
+// is refreshed each render() from the current (filtered) link set.
+let degree = {};
+// Hub repulsion spreads dense regions internally. When clustering already separates
+// the domains a gentle boost suffices; without it, a stronger boost does the whole job
+// of prying the central knot apart.
+const chargeStrength = d => -220 * spreadK() * (1 + (clusterMode ? 0.35 : 0.85) * Math.sqrt(degree[d.id] || 0));
+const linkDistance = d => (d.kind === 'prereq' ? 70 : 55) * spreadK();
+
+// Domain clustering: pull each node toward its domain's anchor on a ring so the map
+// organises into labelled regions instead of one central knot. cs is still the
+// biggest region, but the cross-domain interview hubs finally separate (system design
+// → cs, behavioral interview / job search → career). Degree-repulsion above spreads
+// each region internally; region anchors + labels are recomputed per render().
+let clusterMode = true;
+const DOMAIN_ORDER = ['cs', 'cloud', 'career', 'projects', 'gen-ed', 'other'];
+const DOMAIN_LABEL = {cs: 'computer science', cloud: 'cloud', career: 'career',
+  projects: 'projects', 'gen-ed': 'general ed', other: 'roadmap / other'};
+const domainOf = n => n.domain || 'other';
+
 function hasGap(n) {
   return n.type === 'missing' || (n.requirements || []).some(r => r.gap > 0);
 }
@@ -654,18 +745,61 @@ function visibleData() {
 
 function render() {
   [nodes, links] = visibleData();
+  // Refresh per-node degree from the current link set — drives chargeStrength's
+  // hub repulsion. Computed here (before forceLink resolves source/target to node
+  // refs) so l.source/l.target are still ids.
+  degree = {};
+  links.forEach(l => {
+    const s = l.source.id || l.source, t = l.target.id || l.target;
+    degree[s] = (degree[s] || 0) + 1; degree[t] = (degree[t] || 0) + 1;
+  });
+  // Domain region anchors on a ring (world coords), scaled by the spread factor so
+  // regions stay separated as the map grows. Present domains only, in a stable order.
+  const domsPresent = [...new Set(nodes.map(domainOf))]
+    .sort((a, b) => DOMAIN_ORDER.indexOf(a) - DOMAIN_ORDER.indexOf(b));
+  const ringR = 300 * spreadK();
+  const anchor = {};
+  domsPresent.forEach((dom, i) => {
+    const a = -Math.PI / 2 + 2 * Math.PI * i / Math.max(1, domsPresent.length);
+    anchor[dom] = [W / 2 + ringR * Math.cos(a), H / 2 + ringR * Math.sin(a)];
+  });
   if (sim) sim.stop();
-  gRot.selectAll('.edge,.node').remove();
+  gRot.selectAll('.edge,.node,.domlabel').remove();
 
-  const edge = gRot.selectAll('.edge').data(links).join('line')
+  // Draw only the meaningful links unless co-occurrence is toggled on; `links`
+  // itself (passed to forceLink below) stays complete, so hiding these changes what
+  // is painted, never where nodes land. BUT most nodes (e.g. all of gen-ed: stats,
+  // philosophy, ethics) have no prereq/wikilink at all — only cooccur — so with the
+  // web hidden they read as free-floating islands. Give each such node one visible
+  // tether: its strongest cooccur edge. Reveals cluster structure, not the full web.
+  // (source/target are still ids here — forceLink resolves them to node refs later.)
+  let drawnLinks;
+  if (showCooccur) {
+    drawnLinks = links;
+  } else {
+    const anchored = new Set();
+    links.forEach(l => { if (l.kind !== 'cooccur') { anchored.add(l.source); anchored.add(l.target); } });
+    const tether = new Set();     // strongest cooccur edge per otherwise-unanchored node
+    const best = {};
+    links.forEach(l => {
+      if (l.kind !== 'cooccur') return;
+      [l.source, l.target].forEach(id => {
+        if (anchored.has(id)) return;
+        if (!best[id] || l.strength > best[id].strength) best[id] = l;
+      });
+    });
+    Object.values(best).forEach(l => tether.add(l));
+    drawnLinks = links.filter(l => l.kind !== 'cooccur' || tether.has(l));
+  }
+  const edge = gRot.selectAll('.edge').data(drawnLinks).join('line')
     .attr('class', d => 'edge ' + d.kind)
     .attr('stroke-width', d => Math.min(1 + d.strength, 5));
 
   const node = gRot.selectAll('.node').data(nodes).join('g').attr('class', 'node')
     .call(d3.drag()
-      .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.2).restart(); fxSuspend(); d.fx = d.x; d.fy = d.y; })
       .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
-      .on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = d.fy = null; }))
+      .on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); fxRelease(); d.fx = d.fy = null; }))
     .on('click', (e, d) => { e.stopPropagation(); drill(d.id, true); });
 
   node.append('circle')
@@ -677,7 +811,7 @@ function render() {
   // stars easy to click. +14 matches the collide radius so discs stay disjoint.
   node.append('circle').attr('class', 'hit').attr('r', d => radius(d) + 14);
   // Constellation twin of the circle: an escalating celestial body per evidenced
-  // level (sparkle → 6-point burst → spiral galaxy → black hole). CSS-swapped in
+  // level (sparkle → 6-point burst → spiral galaxy → quasar). CSS-swapped in
   // only when the space skin is on.
   node.each(function (d) { celestialBody(d3.select(this), d); });
   node.append('text').attr('text-anchor', 'middle')
@@ -690,22 +824,47 @@ function render() {
     drawRoute();
   };
   sim = d3.forceSimulation(nodes)
+    // a touch more friction than the 0.4 default so the dense centre glides to a
+    // stop instead of oscillating — kills the constant jiggle at high density
+    .velocityDecay(0.5)
     .force('link', d3.forceLink(links).id(d => d.id)
-      .distance(d => d.kind === 'prereq' ? 70 : 55).strength(d => Math.min(.2 + d.strength * .12, .9)))
-    .force('charge', d3.forceManyBody().strength(-220))
-    .force('center', d3.forceCenter(W / 2, H / 2))
-    // weak gravity keeps disconnected satellite clusters from flying so far
-    // that fitting the bounds shrinks the main component to a speck
-    .force('x', d3.forceX(W / 2).strength(0.05))
-    .force('y', d3.forceY(H / 2).strength(0.05))
+      // Soft stiffness (cap 0.3, was 0.9): the core's strong repeated edges no
+      // longer yank their nodes into a rigid pile, so the dense cluster relaxes.
+      // Sparse edges barely change — they were already below the cap.
+      .distance(linkDistance).strength(d => Math.min(.12 + d.strength * .05, .3)))
+    .force('charge', d3.forceManyBody().strength(chargeStrength))
+    // forceCenter recenters the mean — with lopsided domain sizes that drags the big
+    // cs region back toward the middle and undoes the clustering, so drop it then.
+    .force('center', clusterMode ? null : d3.forceCenter(W / 2, H / 2))
+    // Gravity toward each node's domain anchor (clustering) or the centre (flat). The
+    // clustering pull is firm enough to hold the regions apart against cross-domain
+    // links; the flat pull is the old weak tether that keeps satellites from drifting.
+    .force('x', d3.forceX(d => clusterMode ? anchor[domainOf(d)][0] : W / 2).strength(clusterMode ? 0.3 : 0.05))
+    .force('y', d3.forceY(d => clusterMode ? anchor[domainOf(d)][1] : H / 2).strength(clusterMode ? 0.3 : 0.05))
     .force('collide', d3.forceCollide(d => radius(d) + 14))
-    .on('tick', tick);
+    .on('tick', tick)
+    // any live run (drag or slider re-heat) restores the glow once it settles
+    .on('end.fx', () => fxRelease());
   // Pre-warm: settle the layout fully and synchronously so the first paint is
   // final, then fit the camera to the whole graph — never a moving target.
   // (Dragging a node re-heats the simulation via alphaTarget as before.)
   sim.stop();
   for (let i = 0; i < 600 && sim.alpha() > sim.alphaMin(); i++) sim.tick();
   tick();
+  // Region watermarks: one faint domain label at each cluster's settled centroid,
+  // inserted behind the nodes. Only when clustering and only for regions with nodes.
+  if (clusterMode) {
+    const cent = {};
+    domsPresent.forEach(d => (cent[d] = {x: 0, y: 0, n: 0}));
+    nodes.forEach(n => { const c = cent[domainOf(n)]; c.x += n.x; c.y += n.y; c.n++; });
+    const lg = gRot.insert('g', ':first-child').attr('class', 'domlabel');
+    domsPresent.forEach(d => {
+      if (!cent[d].n) return;
+      lg.append('text').attr('class', 'domlabeltext').attr('text-anchor', 'middle')
+        .attr('x', cent[d].x / cent[d].n).attr('y', cent[d].y / cent[d].n)
+        .text(DOMAIN_LABEL[d] || d);
+    });
+  }
   fitView(null, {duration: 0});
   refreshSearch(false);   // goal filter changed the node set — re-scope any live query
   applyModes();
@@ -1454,6 +1613,31 @@ pathSel.addEventListener('change', () => {
 });
 document.getElementById('gapToggle').addEventListener('change', applyModes);
 document.getElementById('divToggle').addEventListener('change', applyModes);
+// Co-occurrence toggle changes which edges are in the DOM, so it re-renders (like the
+// goal/tag filters). The layout is deterministic and cooccur stays in the sim, so the
+// map doesn't move — only the faint web fades in or out.
+document.getElementById('cooccurToggle').addEventListener('change', e => { showCooccur = e.target.checked; render(); });
+// Cluster toggle reorganises the whole layout (domain anchors vs one field), so re-render.
+document.getElementById('clusterToggle').addEventListener('change', e => { clusterMode = e.target.checked; render(); });
+// Spread slider: multiplies the node-count-adaptive spacing so a crowded map can be
+// pushed further apart (or pulled tighter) by hand. Dragging re-heats the live sim so
+// the field breathes to its new spacing; on release we reframe once it has settled.
+const spreadSlider = document.getElementById('spreadSlider');
+spreadSlider.addEventListener('input', () => {
+  userSpread = +spreadSlider.value;
+  if (!sim) return;
+  // re-setting the accessors makes d3 recompute charge/link tables against the new
+  // userSpread; alpha(0.5) gives it just enough energy to reflow, not a full reset
+  sim.force('charge').strength(chargeStrength);
+  sim.force('link').distance(linkDistance);
+  fxSuspend();
+  sim.alpha(0.5).restart();
+});
+spreadSlider.addEventListener('change', () => {
+  if (!sim) return;
+  // one-shot: refit the camera the moment the reflow settles, then unhook
+  sim.on('end.spreadfit', () => { sim.on('end.spreadfit', null); fitView(null, {duration: 500}); });
+});
 // legend keys toggle a level filter: fade everything, illuminate that rung
 document.querySelectorAll('#legend [data-level]').forEach(el => {
   el.addEventListener('click', () => {
@@ -1600,14 +1784,16 @@ function spiralArm(R, off) {
 }
 // The map's five evidenced rungs made into escalating celestial bodies. The
 // light-emitting parts carry class 'star' so the glow, twinkle, and hot/focus
-// highlight styles apply uniformly; galaxies and black holes stay steady (no
+// highlight styles apply uniformly; galaxies and quasars stay steady (no
 // twinkle). Levels 4-5 are rare by design — trophies you earn by reaching
 // fluency/mastery, so most of the sky is sparkles.
 function celestialBody(sel, d) {
   const r = radius(d), missing = d.type === 'missing';
   const col = missing ? 'var(--edge)' : color(d);
   const lvl = missing ? 1 : Math.min(5, Math.max(1, Math.floor(d.evidenced) || 1));
-  const twinkle = r >= 14 && lvl <= 3;
+  // Only the larger stars twinkle — fewer continuous animations, and it reads as a
+  // deliberate highlight rather than a restless field (was r >= 14, ~92 of them).
+  const twinkle = r >= 20 && lvl <= 3;
   const glow = el => el.attr('class', 'star' + (twinkle ? ' star-twinkle' : ''))
     .style('color', col)
     .style('--tw', (2.2 + Math.random() * 3.2).toFixed(2) + 's')
@@ -1636,12 +1822,26 @@ function celestialBody(sel, d) {
     sel.append('circle').attr('class', 'star').attr('r', r * 0.26)
       .attr('fill', '#fff').attr('fill-opacity', 0.95).style('color', col);
   } else {
-    // mastery: a black hole — a pitch-black disc that occludes the network behind
-    // it, ringed only by a thin event-horizon rim and a soft outer glow. Nothing
-    // bright in the centre; it swallows light rather than emitting it.
-    sel.append('circle').attr('class', 'star').attr('r', r).attr('fill', '#000')
-      .attr('stroke', col).attr('stroke-width', 1.3).attr('stroke-opacity', 0.9)
-      .style('color', col).style('filter', 'drop-shadow(0 0 5px currentColor)');
+    // mastery: a quasar — a black hole that has ignited. Twin relativistic jets
+    // blaze out along an axis from a blinding white-hot core wrapped in a hot
+    // accretion disk. The rarest, brightest body, one rung past the fluency galaxy.
+    // (The dark, swallowing black hole is reserved as a future structural/density
+    // tool — see docs/graph-scaling.md — so mastery and "collapsed region" never
+    // read as the same thing.)
+    const q = sel.append('g').attr('transform', 'rotate(-24)');
+    // twin jets: tapering beams up and down from the core, blurred to a blaze
+    [1, -1].forEach(dir => q.append('path').attr('class', 'star')
+      .attr('d', `M ${-r * 0.32} 0 L 0 ${dir * r * 3} L ${r * 0.32} 0 Z`)
+      .attr('fill', col).attr('fill-opacity', 0.5).style('color', col)
+      .style('filter', 'drop-shadow(0 0 4px currentColor)'));
+    // hot accretion disk — brighter and tighter than the fluency galaxy's
+    q.append('ellipse').attr('class', 'star').attr('rx', r * 1.6).attr('ry', r * 0.42)
+      .attr('fill', col).attr('fill-opacity', 0.3).style('color', col);
+    // blinding core: a glowing coloured bulge under a white-hot nucleus
+    q.append('circle').attr('class', 'star').attr('r', r * 0.55).attr('fill', col)
+      .style('color', col).style('filter', 'drop-shadow(0 0 8px currentColor)');
+    q.append('circle').attr('class', 'star').attr('r', r * 0.3)
+      .attr('fill', '#fff').attr('fill-opacity', 0.98).style('color', col);
   }
 }
 
@@ -1657,11 +1857,18 @@ function buildStarfield() {
   const spin = document.createElement('div');
   spin.id = 'sfSpin';
   host.appendChild(spin);
-  const D = Math.ceil(Math.hypot(W, H) * 1.35);
+  // Sized generously past the viewport, and — the important part — the stars
+  // fade radially to nothing before the canvas rim (see `fade` below). A dive
+  // pitches this plane back 34°, which used to rotate its hard rectangular edge
+  // into view as a corny visible border; with the rim already empty, the tilt
+  // now just recedes into deep space. Fully populated within the inner disc
+  // (which still covers the flat viewport), easing out beyond it.
+  const D = Math.ceil(Math.hypot(W, H) * 1.8);
   const layer = (count, rmax, amax, tint) => {
     const c = document.createElement('canvas');
     c.width = D; c.height = D; c.style.width = D + 'px'; c.style.height = D + 'px';
     const x = c.getContext('2d');
+    // Uniform stars — the CSS radial mask (see #starfield canvas) does the edge fade.
     for (let i = 0; i < count; i++) {
       const a = (Math.random() * amax + 0.12).toFixed(2);
       x.beginPath();
@@ -1673,8 +1880,9 @@ function buildStarfield() {
     }
     spin.appendChild(c);
   };
-  layer(460, 1.0, 0.45, false);  // far, faint — child[0]
-  layer(150, 1.7, 0.7, true);    // near, a few tinted — child[1]
+  // counts scaled to the 1.8x area so on-screen density is unchanged
+  layer(820, 1.0, 0.45, false);  // far, faint — child[0]
+  layer(268, 1.7, 0.7, true);    // near, a few tinted — child[1]
 }
 
 // Camera rotation. gRot spins around the cluster centre (world coords); the two
@@ -1694,11 +1902,21 @@ function setCam(rot, tilt, cx, cy) {
   if (tilt) { gel.style.transformOrigin = 'center center';
     gel.style.transform = `perspective(900px) rotateX(${tilt.toFixed(2)}deg)`; }
   else gel.style.transform = '';
+  // An <svg> clips to its viewport rectangle by default. Tilting #graph tilts that
+  // clip rect, so content is sliced off along a straight line fixed by the pitch and
+  // independent of zoom — THE plane-edge cutoff. Lift the clip only while pitched, so
+  // the tilted plane can extend past the frame; restored flat so normal panning still
+  // clips cleanly and nothing spills over the UI at rest.
+  document.body.classList.toggle('diving', !!tilt);
   const layers = document.querySelectorAll('#starfield canvas');
+  // Parallax: the two layers tilt at fractions of the graph's pitch for depth. Their
+  // own plane can't show an edge because the radial mask (see #starfield canvas) fades
+  // each canvas to nothing well inside its rectangle. A touch gentler than the original
+  // 0.5/0.8 so they recede a little less — belt and suspenders with the mask.
   if (layers[0]) { layers[0].style.setProperty('--sf-rot', (rot * 0.3).toFixed(2) + 'deg');
-    layers[0].style.setProperty('--sf-tilt', (tilt * 0.5).toFixed(2) + 'deg'); }
+    layers[0].style.setProperty('--sf-tilt', (tilt * 0.35).toFixed(2) + 'deg'); }
   if (layers[1]) { layers[1].style.setProperty('--sf-rot', (rot * 0.62).toFixed(2) + 'deg');
-    layers[1].style.setProperty('--sf-tilt', (tilt * 0.8).toFixed(2) + 'deg'); }
+    layers[1].style.setProperty('--sf-tilt', (tilt * 0.5).toFixed(2) + 'deg'); }
 }
 function spin(targetRot, targetTilt, cx, cy, dur) {
   if (!document.body.classList.contains('constellation')) return;
