@@ -1,0 +1,33 @@
+# Tags — thematic lenses over topics.
+#
+# A tag groups related topics so the map's search and the Tag filter can surface
+# them together, even when the topic names share no words (e.g. searching a
+# vendor's name can light up every product of theirs you've studied). This is a
+# curated map, not per-note metadata: a tag is just a saved grouping of existing
+# topic ids.
+#
+# `brain graph` reads this file and attaches the tags to matching nodes. Edit
+# freely — add tags, add topics — or just ask in a session ("tag my AWS stuff")
+# and the /tag skill proposes members for you. Topic names must match the ids on
+# the map (they're the lowercase topic labels). Unmatched topics are reported at
+# export time and ignored.
+#
+# Format:
+#   <tag-id>:
+#     label: <display name shown in the filter>
+#     topics: [<topic-id>, <topic-id>, ...]
+#
+# The example below matches the starter demo notes (brain demo --install);
+# replace it with your own lenses as your map grows.
+
+coding-interviews:
+  label: Coding interviews
+  topics:
+    - big o
+    - hash tables
+    - recursion
+    - dynamic programming
+    - graphs
+    - sorting
+    - binary search trees
+    - elevator pitch

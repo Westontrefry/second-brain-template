@@ -52,6 +52,31 @@ def test_track_prereq_edges_and_suggestions(sandbox):
     assert sugg[0]["score"] >= sugg[-1]["score"]
 
 
+def test_imported_roadmap_format_track_renders(sandbox):
+    # A roadmap-FORMAT file imported as a track (brain model import x.yaml) is
+    # a real track, not an in-repo goal roadmap — the graph's skip for
+    # goal-mirroring tracks must match by id, never by adapter, or the
+    # imported track silently never reaches the map.
+    spec = sandbox / "plan.yaml"
+    spec.write_text(
+        "title: Imported Plan\n"
+        "topics:\n"
+        "  - id: plan-basics\n    name: Plan basics\n    prereqs: []\n"
+        "  - id: plan-advanced\n    name: Plan advanced\n    prereqs: [plan-basics]\n",
+        encoding="utf-8",
+    )
+    import_resource(spec, adapter="roadmap", slug="imported-plan")
+    g = build(today=TODAY)
+    entry = next((e for e in g["goals"] if e["id"] == "imported-plan"), None)
+    assert entry and entry["kind"] == "track"
+    nodes = by_id(g)
+    assert nodes["plan-basics"]["type"] == "missing"
+    assert "imported-plan" in nodes["plan-advanced"]["goals"]
+    assert g["suggestions"]["imported-plan"]
+    # ...while goal-mirroring roadmap tracks stay deduplicated
+    assert sum(1 for e in g["goals"] if e["id"] == "dsa-interviews") == 1
+
+
 def test_convergence_on_nodes(sandbox):
     write_note(sandbox, "2026-07-01-tr", topics=["trees"], confidence=3)
     import_resource(FIXTURE, slug="adv-ds")       # trees now in dsa roadmap + adv-ds

@@ -3,15 +3,66 @@
 <head>
 <meta charset="utf-8">
 <title>Second Brain</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="stylesheet" href="katex/katex.min.css">
 <link rel="stylesheet" href="hljs-github.min.css" id="hljsCss">
 <style>
-  :root { --lvl1:#9AA0A6; --lvl2:#EF9F27; --lvl3:#6BAE45; --lvl4:#1D9E75;
-          --lvl5:#2C7FB8; --hot:#D85A30; --dim-op:.12;
+  :root { --lvl1:#9AA0A6; --lvl2:#EF9F27; --lvl3:#6BAE45; --lvl4:#3A86C8;
+          --lvl5:#7A4FC0; --hot:#D85A30; --dim-op:.12;
           --ink:#2c2c2a; --muted:#77766f; --line:#d9d7ce; --bg:#faf9f5;
           --panel:#ffffff; --code-bg:#f4f2ea; --edge:#9a988f; --link:#185FA5; }
   body.dark { --ink:#e6e4dc; --muted:#9c9a90; --line:#3b3a36; --bg:#1b1b19;
               --panel:#252522; --code-bg:#2e2e2a; --edge:#66655e; --link:#7db3ea; }
+  /* ---- Constellation: a global space skin, toggled like dark mode
+     (body.constellation, persisted in localStorage). Deep near-black, faint
+     real starlight, no gradients. The Map turns into a starfield you dive into:
+     clicking a topic wheels the whole field around its cluster. ---- */
+  body.constellation { --ink:#e8e9f0; --muted:#8b8ea3; --line:#20222e; --bg:#05060a;
+              --panel:#0b0d15; --code-bg:#10121c; --edge:#333850; --link:#8fb8ff; }
+  body.constellation, body.constellation #stage { background:#05060a; }
+  body.constellation header { background:rgba(8,9,15,.72); backdrop-filter:blur(6px); border-bottom-color:#161821; }
+  body.constellation #panel, body.constellation .chartcard,
+  body.constellation #noteBox, body.constellation #cmCard { background:rgba(11,13,21,.9); backdrop-filter:blur(8px); }
+  #starfield { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0; display:none; }
+  body.constellation #starfield { display:block; }
+  #starfield canvas { position:absolute; top:50%; left:50%; transform-origin:center center;
+                      transform:translate(-50%,-50%) perspective(1600px) rotateX(var(--sf-tilt,0deg)) rotate(var(--sf-rot,0deg));
+                      will-change:transform; }
+  /* Ambient drift: the starfield slowly rotates around the view centre (≈ the
+     focused cluster), a gentle star-trail time-lapse so the sky feels alive.
+     The clip stays on #starfield (axis-aligned); only this inner layer spins,
+     so the oversized canvases never expose a corner. Dive rotation/tilt still
+     ride on the canvases inside. */
+  #sfSpin { position:absolute; inset:0; transform-origin:center center;
+            animation:sfDrift 200s linear infinite; }
+  @keyframes sfDrift { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #sfSpin { animation:none; } }
+  /* Lift the graph above the starfield — but only in constellation, and keep
+     the detail panel above the (transparent) SVG so its links stay clickable. */
+  body.constellation #graph { position:relative; z-index:1; }
+  body.constellation #panel { z-index:10; }
+  /* star nodes: a 4-point sparkle with a soft self-coloured glow. Off by
+     default; the plain circles carry non-constellation modes untouched. */
+  .star { display:none; }
+  /* The 4-point star is a spiky shape with empty notches between the arms, and
+     nodes render tiny at the overview — so clicks land on an oversized transparent
+     disc instead. It's sized to the collision radius, the largest target that
+     still never overlaps a neighbour's disc. Inert outside constellation; the
+     plain map keeps its own visible circle as the hit target. */
+  .node circle.hit { fill:transparent; stroke:none; pointer-events:none; }
+  body.constellation .node circle:not(.hit):not(.star) { display:none; }
+  body.constellation .node circle.hit { pointer-events:all; }
+  body.constellation .star { display:block; filter:drop-shadow(0 0 3px currentColor); pointer-events:none; }
+  body.constellation .node text { fill:#aeb2c9; }
+  body.constellation .edge { stroke:#2b2f43; stroke-opacity:.5; }
+  /* the circle carries hot/focus/diverge in the normal map; mirror those onto
+     the star so search, pathways and divergence still read in space */
+  body.constellation .hot .star { filter:drop-shadow(0 0 6px var(--hot)); }
+  body.constellation .diverge .star { stroke:#7F77DD; stroke-width:2px; }
+  body.constellation .focusring .star { stroke:#378ADD; stroke-width:2px; }
+  .star-twinkle { animation:twinkle var(--tw,3s) ease-in-out infinite alternate; }
+  @keyframes twinkle { from { opacity:.5; } to { opacity:1; } }
+  #constBtn.active { color:var(--link); border-color:var(--link); }
   * { box-sizing:border-box; }
   select, input { background:var(--panel); color:inherit; }
   button { color:var(--ink); }
@@ -20,6 +71,8 @@
   header { display:flex; gap:14px; align-items:center; padding:10px 16px;
            border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
   header h1 { font-size:15px; font-weight:600; margin:0 8px 0 0; }
+  header .brand { display:flex; align-items:center; gap:8px; }
+  header .brandmark { width:24px; height:24px; border-radius:6px; display:block; flex:none; }
   header label { font-size:12.5px; color:var(--muted); display:flex; gap:5px; align-items:center; }
   select { font:inherit; font-size:12.5px; padding:2px 4px; }
   #legend { margin-left:auto; display:flex; gap:6px; font-size:12px; color:var(--muted); }
@@ -146,6 +199,17 @@
   .chartcard .csub { color:var(--muted); font-size:11.5px; margin-bottom:8px; }
   .chartview .axis text, .chartview .tick text { font-size:10.5px; fill:var(--muted); }
   .chartview svg { overflow:visible; }
+  /* divergence "see all N" pile expander + its dropdown */
+  text.pile { fill:var(--link); cursor:pointer; }
+  text.pile:hover { text-decoration:underline; }
+  #scatterPop { position:fixed; z-index:40; display:none; background:var(--panel);
+    border:1px solid var(--line); border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.16);
+    max-height:260px; overflow-y:auto; font-size:12px; padding:4px; }
+  #scatterPop .pileHead { font-size:11px; color:var(--muted); padding:5px 8px 6px; }
+  #scatterPop .pileRow { display:flex; justify-content:space-between; gap:12px; align-items:baseline;
+    padding:5px 8px; border-radius:5px; cursor:pointer; }
+  #scatterPop .pileRow:hover { background:var(--code-bg); }
+  #scatterPop .pileMeta { font-size:11px; white-space:nowrap; }
   /* empty states carry the same visual weight as the chart they stand in for:
      chart-sized footprint, readable type (readability pass, 2026-07-05) */
   .chartview .empty { color:var(--ink); font-size:15px; line-height:1.75;
@@ -234,7 +298,7 @@
 </head>
 <body data-view="map">
 <header>
-  <h1>Second Brain</h1>
+  <span class="brand"><img class="brandmark" src="logo.svg" alt="Second Brain logo" width="24" height="24"><h1>Second Brain</h1></span>
   <nav id="viewTabs">
     <button data-view="map" class="active" title="press 1">Map</button>
     <button data-view="readiness" title="press 2">Readiness</button>
@@ -242,11 +306,14 @@
     <button data-view="estate" title="press 4">Real estate</button>
   </nav>
   <div id="search" class="maponly">
-    <input id="searchBox" type="text" placeholder="search topics…" autocomplete="off" spellcheck="false">
+    <input id="searchBox" type="text" placeholder="search topics and tags…" autocomplete="off" spellcheck="false">
     <div id="searchSug"></div>
   </div>
   <label>Goal
     <select id="goalSel"><option value="">all</option></select>
+  </label>
+  <label class="maponly">Tag
+    <select id="tagSel"><option value="">all</option></select>
   </label>
   <label class="maponly">Pathway
     <select id="pathSel"><option value="">none</option></select>
@@ -257,6 +324,7 @@
   <button id="cockBtn" title="drive quiz / log / review from here"><span class="pip"></span>Cockpit</button>
   <button id="refBtn" style="font:inherit; font-size:12.5px; padding:3px 10px; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer;">reference key</button>
   <button id="themeBtn" title="toggle dark mode" style="padding:4px 8px; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color:var(--muted);"></button>
+  <button id="constBtn" title="toggle Constellation (space) view" style="padding:4px 8px; border:1px solid var(--line); border-radius:6px; background:var(--panel); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color:var(--muted);"></button>
   <span id="dataAge" style="font-size:11.5px; color:var(--muted); white-space:nowrap;"></span>
   <div id="legend" class="maponly">
     <span data-level="1"><span class="dot" style="background:var(--lvl1)"></span>1 aware</span>
@@ -268,6 +336,7 @@
   </div>
 </header>
 <div id="stage">
+  <div id="starfield"></div>
   <svg id="graph"></svg>
   <aside id="suggest"></aside>
   <aside id="panel"></aside>
@@ -507,7 +576,13 @@ const G = window.GRAPH, PATHS = window.PATHS || [];
 const svg = d3.select('#graph'), stage = document.getElementById('stage');
 const W = stage.clientWidth, H = stage.clientHeight;
 const g = svg.append('g');
-const routeEl = g.append('path').attr('id', 'route');
+// Constellation rotation layer: nested inside the d3-zoom group so pan/zoom
+// stay with d3 (translate+scale only) while a dive can wheel the whole field
+// around a focused cluster. Identity transform when not diving — inert in the
+// normal map. g.selectAll('.node'/'.edge') elsewhere still finds these as
+// descendants, so only the append/route sites target gRot.
+const gRot = g.append('g').attr('id', 'rot');
+const routeEl = gRot.append('path').attr('id', 'route');
 const zoom = d3.zoom().scaleExtent([0.08, 4]).on('zoom', e => g.attr('transform', e.transform));
 svg.call(zoom);
 
@@ -548,6 +623,13 @@ const goalSel = document.getElementById('goalSel');
 const pathSel = document.getElementById('pathSel');
 PATHS.forEach((p, i) => pathSel.add(new Option(p.title || p.slug, i)));
 
+// Tags: curated lenses over topics (tags.yaml). The dropdown filters the map to
+// a tag's sub-network; search also matches tag labels (see searchHits). tagById
+// gives the label for a node's tag ids.
+const tagSel = document.getElementById('tagSel');
+const tagById = Object.fromEntries((G.tags || []).map(t => [t.id, t]));
+(G.tags || []).forEach(t => tagSel.add(new Option(`${t.label} (${t.count})`, t.id)));
+
 let nodes = [], links = [], sim = null, focusId = null, crumbs = [];
 
 function hasGap(n) {
@@ -561,8 +643,10 @@ function color(n) {
 }
 
 function visibleData() {
-  const goal = goalSel.value;
-  const ns = G.nodes.filter(n => !goal || (n.goals || []).includes(goal));
+  const goal = goalSel.value, tag = tagSel.value;
+  const ns = G.nodes.filter(n =>
+    (!goal || (n.goals || []).includes(goal)) &&
+    (!tag || (n.tags || []).includes(tag)));
   const ids = new Set(ns.map(n => n.id));
   const ls = G.edges.filter(e => ids.has(e.source.id || e.source) && ids.has(e.target.id || e.target));
   return [ns.map(n => Object.assign({}, n)), ls.map(l => Object.assign({}, l))];
@@ -571,13 +655,13 @@ function visibleData() {
 function render() {
   [nodes, links] = visibleData();
   if (sim) sim.stop();
-  g.selectAll('.edge,.node').remove();
+  gRot.selectAll('.edge,.node').remove();
 
-  const edge = g.selectAll('.edge').data(links).join('line')
+  const edge = gRot.selectAll('.edge').data(links).join('line')
     .attr('class', d => 'edge ' + d.kind)
     .attr('stroke-width', d => Math.min(1 + d.strength, 5));
 
-  const node = g.selectAll('.node').data(nodes).join('g').attr('class', 'node')
+  const node = gRot.selectAll('.node').data(nodes).join('g').attr('class', 'node')
     .call(d3.drag()
       .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
       .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
@@ -589,6 +673,13 @@ function render() {
     .attr('class', d => d.type === 'missing' ? 'missing' : '')
     .attr('fill', d => d.type === 'missing' ? 'none' : color(d))
     .attr('data-id', d => d.id);
+  // Oversized transparent hit disc (constellation only) — makes the tiny spiky
+  // stars easy to click. +14 matches the collide radius so discs stay disjoint.
+  node.append('circle').attr('class', 'hit').attr('r', d => radius(d) + 14);
+  // Constellation twin of the circle: an escalating celestial body per evidenced
+  // level (sparkle → 6-point burst → spiral galaxy → black hole). CSS-swapped in
+  // only when the space skin is on.
+  node.each(function (d) { celestialBody(d3.select(this), d); });
   node.append('text').attr('text-anchor', 'middle')
     .attr('dy', d => radius(d) + 13).text(d => d.label);
 
@@ -671,6 +762,7 @@ function drill(id, push) {
   applyModes();
   // bring the ego network into view, keeping clear of the detail panel
   fitView(neighborSet(id), {avail: W - 344});
+  if (document.body.classList.contains('constellation')) diveTo(id);  // wheel into the cluster
   const n = nodes.find(x => x.id === id) || G.nodes.find(x => x.id === id);
   const panel = document.getElementById('panel');
   const reqRows = (n.requirements || []).map(r =>
@@ -704,6 +796,8 @@ function drill(id, push) {
     <table><tr><td>self-assessed</td><td>${n.selfConfidence || '—'}</td></tr>
     <tr><td>ai (evidence-based)</td><td>${n.aiConfidence ?? 'unassessed'}</td></tr></table>
     ${reqRows ? '<h3>Required by goals</h3><table>' + reqRows + '</table>' : ''}
+    ${(n.practice || []).length ? '<h3>Practice (' + n.practice.length + ')</h3><div>' +
+      n.practice.map(p => `<div><a href="${p.url}" target="_blank" rel="noopener">${p.name} ↗</a></div>`).join('') + '</div>' : ''}
     ${Object.keys(n.sources || {}).length ? '<h3>Evidence mix</h3><table>' +
       Object.entries(n.sources).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('') + '</table>' : ''}
     ${noteRows ? '<h3>Notes (' + n.notes.length + ')</h3>'
@@ -721,7 +815,7 @@ function drill(id, push) {
   panel.querySelectorAll('.nodeAct button').forEach(el =>
     el.addEventListener('click', () => {
       const a = el.dataset.act;
-      // quiz/review fire straight away on this topic; log seeds the sentence.
+      // quiz/review/expand fire straight away on this topic; log seeds the sentence.
       if (a === 'log') window.cockpit.start('log', 'Studied ' + n.label + ': ', false);
       else window.cockpit.start(a, n.label, true);
     }));
@@ -741,6 +835,7 @@ function clearFocus() {
   document.getElementById('panel').style.display = 'none';
   applyModes();
   fitView(null);
+  if (document.body.classList.contains('constellation')) spin(0, 0, W / 2, H / 2, 650);  // level out & unwind
 }
 
 // ---- markdown note viewer (bodies bundled in notes.data.js) ----
@@ -1024,6 +1119,7 @@ function drawScatterView() {
     n.type === 'topic' && n.selfConfidence > 0 && n.aiConfidence == null).length;
   const root = d3.select('#scatter');
   root.selectAll('*').remove();
+  closeScatterPile();  // stale dropdown from a prior draw (goal change, resize)
   if (!pts.length) {
     // Ghosted, labeled EXAMPLE scatter. Divergence is the one chart the U2
     // demo pack can't fill (demo assessments are excluded by locked design),
@@ -1090,19 +1186,96 @@ function drawScatterView() {
     .attr('fill', 'var(--muted)').text('AI-assessed level');
   svgc.append('line').attr('x1', x(0)).attr('y1', y(0)).attr('x2', x(5)).attr('y2', y(5))
     .attr('stroke', 'var(--line)').attr('stroke-dasharray', '4 4');
-  svgc.selectAll('circle').data(pts).join('circle')
-    .attr('cx', d => x(d.selfConfidence)).attr('cy', d => y(d.aiConfidence))
+  // The axes are a coarse integer lattice (self-confidence 1-3, AI level 0-5),
+  // so many topics land on the exact same point. Dodge each coincident group
+  // into a small sunflower cluster (deterministic phyllotaxis) so the dots stop
+  // stacking on one pixel and each stays hoverable and clickable.
+  const laid = [], cells = [];
+  d3.group(pts, d => d.selfConfidence + '|' + d.aiConfidence).forEach(arr => {
+    const cellX = x(arr[0].selfConfidence), cellY = y(arr[0].aiConfidence);
+    const rMax = arr.length > 1 ? 7 * Math.sqrt(arr.length - 0.5) : 0;
+    arr.forEach((d, i) => {
+      const rr = arr.length > 1 ? 7 * Math.sqrt(i + 0.5) : 0;
+      const aa = i * 2.399963229728653;  // golden angle
+      laid.push({d, cx: cellX + rr * Math.cos(aa), cy: cellY + rr * Math.sin(aa)});
+    });
+    cells.push({arr, cellX, cellY, rMax});
+  });
+  svgc.selectAll('circle').data(laid).join('circle')
+    .attr('cx', p => p.cx).attr('cy', p => p.cy)
     .attr('r', 5)
-    .attr('fill', d => d.aiConfidence < d.selfConfidence ? 'var(--hot)' : 'var(--lvl4)')
+    .attr('fill', p => p.d.aiConfidence < p.d.selfConfidence ? 'var(--hot)' : 'var(--lvl4)')
     .attr('fill-opacity', .75)
     .style('cursor', 'pointer')
-    .on('click', (e, d) => goToMap(d.id))
+    .on('click', (e, p) => goToMap(p.d.id))
     .append('title')
-    .text(d => `${d.label}: self ${d.selfConfidence}, assessed ${d.aiConfidence}. Click to open in the map.`);
-  svgc.selectAll('text.pt').data(pts).join('text').attr('class', 'pt')
-    .attr('x', d => x(d.selfConfidence) + 7).attr('y', d => y(d.aiConfidence) + 3)
-    .attr('font-size', '10px').attr('fill', 'var(--muted)').text(d => d.label);
+    .text(p => `${p.d.label}: self ${p.d.selfConfidence}, assessed ${p.d.aiConfidence}. Click to open in the map.`);
+  // Even dodged, there isn't room to label every dot. Place labels greedily —
+  // most-divergent topics first (they're the point of the chart) — and skip any
+  // that would overlap one already placed. The unlabeled dots reveal their name
+  // on hover, so nothing is lost and nothing smears.
+  const div = p => Math.abs(p.d.selfConfidence - p.d.aiConfidence);
+  const order = laid.slice().sort((a, b) => div(b) - div(a) || (b.d.weight || 0) - (a.d.weight || 0));
+  const boxes = [], labels = [], labeled = new Set();
+  const fits = (bx, by, w) => bx >= M.l && bx + w <= W - 2 && by >= M.t && by + 11 <= H - M.b &&
+    !boxes.some(b => bx < b.x + b.w && bx + w > b.x && by < b.y + 11 && by + 11 > b.y);
+  order.forEach(p => {
+    const w = p.d.label.length * 5.6 + 4;
+    // try four anchor spots around the dot (right, left, above, below); take the
+    // first that's on-canvas and clear of labels already placed. None fits → the
+    // dot stays unlabeled and is reachable via its cluster's "see all" list.
+    const cands = [
+      {bx: p.cx + 7,     by: p.cy - 5,  tx: p.cx + 7, ty: p.cy + 3,  a: 'start'},
+      {bx: p.cx - 7 - w, by: p.cy - 5,  tx: p.cx - 7, ty: p.cy + 3,  a: 'end'},
+      {bx: p.cx - w / 2, by: p.cy - 17, tx: p.cx,     ty: p.cy - 9,  a: 'middle'},
+      {bx: p.cx - w / 2, by: p.cy + 7,  tx: p.cx,     ty: p.cy + 16, a: 'middle'},
+    ];
+    const c = cands.find(c => fits(c.bx, c.by, w));
+    if (c) { boxes.push({x: c.bx, y: c.by, w}); labels.push({p, tx: c.tx, ty: c.ty, a: c.a}); labeled.add(p.d.id); }
+  });
+  svgc.selectAll('text.pt').data(labels).join('text').attr('class', 'pt')
+    .attr('x', l => l.tx).attr('y', l => l.ty).attr('text-anchor', l => l.a)
+    .attr('font-size', '10px').attr('fill', 'var(--muted)').text(l => l.p.d.label);
+  // Any cluster that still hides topics gets a clickable "see all N ▾" line below
+  // it — opens a dropdown listing every topic stacked there, each row a shortcut
+  // to that topic in the map.
+  const piles = cells.filter(c => c.arr.some(d => !labeled.has(d.id)));
+  svgc.selectAll('text.pile').data(piles).join('text').attr('class', 'pile')
+    .attr('x', c => c.cellX).attr('y', c => Math.min(H - M.b - 3, c.cellY + c.rMax + 15))
+    .attr('text-anchor', 'middle').attr('font-size', '10px')
+    .text(c => `see all ${c.arr.length} ▾`)
+    .on('click', (e, c) => { e.stopPropagation(); showScatterPile(e.currentTarget, c.arr); });
 }
+
+// Dropdown listing every topic stacked in one divergence cluster. One reusable
+// element, repositioned per click; closes on outside-click, Escape, or redraw.
+function closeScatterPile() {
+  const el = document.getElementById('scatterPop');
+  if (el) el.style.display = 'none';
+}
+function showScatterPile(anchor, arr) {
+  let el = document.getElementById('scatterPop');
+  if (!el) { el = document.createElement('div'); el.id = 'scatterPop'; document.body.appendChild(el); }
+  const rows = arr.slice().sort((a, b) =>
+    Math.abs(b.selfConfidence - b.aiConfidence) - Math.abs(a.selfConfidence - a.aiConfidence));
+  el.innerHTML = `<div class="pileHead">${arr.length} topics stacked here</div>` + rows.map(d =>
+    `<div class="pileRow" data-id="${d.id}"><span>${d.label}</span>` +
+    `<span class="pileMeta" style="color:${d.aiConfidence < d.selfConfidence ? 'var(--hot)' : 'var(--muted)'}">` +
+    `self ${d.selfConfidence} · ai ${d.aiConfidence}</span></div>`).join('');
+  el.style.display = 'block';
+  const r = anchor.getBoundingClientRect(), w = 230;
+  el.style.width = w + 'px';
+  el.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+  el.style.top = (r.bottom + 6) + 'px';
+  el.querySelectorAll('.pileRow').forEach(row =>
+    row.addEventListener('click', () => { closeScatterPile(); goToMap(row.dataset.id); }));
+}
+document.addEventListener('click', e => {
+  const el = document.getElementById('scatterPop');
+  if (el && el.style.display === 'block' && !el.contains(e.target) &&
+      !(e.target.classList && e.target.classList.contains('pile'))) closeScatterPile();
+});
+window.addEventListener('keydown', e => { if (e.key === 'Escape') closeScatterPile(); });
 
 // Knowledge real estate: size = topic weight (mass), color = evidenced level
 // (the same tiers as the map legend) — size says where your knowledge lives,
@@ -1269,6 +1442,7 @@ window.addEventListener('resize', () => {
 
 svg.on('click', clearFocus);
 goalSel.addEventListener('change', () => { clearFocus(); render(); renderSuggest(); markChartsDirty(); });
+tagSel.addEventListener('change', () => { clearFocus(); render(); renderSuggest(); markChartsDirty(); });
 pathSel.addEventListener('change', () => {
   route = pathSel.value === '' ? null : PATHS[+pathSel.value];
   if (route) {
@@ -1296,11 +1470,19 @@ const searchBox = document.getElementById('searchBox');
 const searchSugEl = document.getElementById('searchSug');
 let sugHits = [], sugSel = -1;
 
+// Search matches a node by its own label OR by any tag it carries, so "google"
+// surfaces gcp/gemini/bigquery even though none of them say "google". Direct
+// label matches rank above tag-only matches, then by weight.
+function nodeTagLabels(n) {
+  return (n.tags || []).map(t => (tagById[t] || {}).label || t).join(' ').toLowerCase();
+}
 function searchHits(q) {
   q = q.trim().toLowerCase();
   if (!q) return null;
-  return nodes.filter(n => n.label.toLowerCase().includes(q))
+  return nodes.filter(n => n.label.toLowerCase().includes(q) || nodeTagLabels(n).includes(q))
     .sort((a, b) => {
+      const al = a.label.toLowerCase().includes(q), bl = b.label.toLowerCase().includes(q);
+      if (al !== bl) return al ? -1 : 1;  // label matches before tag-only matches
       const ap = a.label.toLowerCase().startsWith(q), bp = b.label.toLowerCase().startsWith(q);
       if (ap !== bp) return ap ? -1 : 1;
       return (b.weight || 0) - (a.weight || 0);
@@ -1313,11 +1495,18 @@ function refreshSearch(showSug) {
   sugHits = hits === null ? [] : hits.slice(0, 8);
   sugSel = -1;
   if (showSug && sugHits.length) {
+    const q = searchBox.value.trim().toLowerCase();
     searchSugEl.innerHTML = sugHits.map((n, i) => {
       const dot = n.type === 'missing'
         ? '<span class="dot" style="border:1.5px dashed var(--edge)"></span>'
         : `<span class="dot" style="background:${color(n)}"></span>`;
-      const meta = n.type === 'missing' ? 'not yet covered' : `lvl ${n.evidenced} · w ${n.weight}`;
+      // a tag-only match says which tag surfaced it — "gcp" appearing for
+      // "google" is the feature working, and the suggestion should say so
+      const via = !n.label.toLowerCase().includes(q) &&
+        (n.tags || []).map(t => tagById[t] || {label: t})
+          .find(t => (t.label || '').toLowerCase().includes(q));
+      const meta = (via ? `via ${via.label} · ` : '') +
+        (n.type === 'missing' ? 'not yet covered' : `lvl ${n.evidenced} · w ${n.weight}`);
       return `<div class="item" data-i="${i}">${dot}${n.label}<span class="meta">${meta}</span></div>`;
     }).join('');
     searchSugEl.style.display = 'block';
@@ -1377,6 +1566,183 @@ searchBox.addEventListener('keydown', e => {
   setInterval(tick, 60000);
 })();
 render();
+
+// ============ Constellation: the space skin + cinematic dive ============
+// A global, persisted toggle (body.constellation). The skin is pure CSS; this
+// block adds the starfield and the click-to-dive camera. The dive keeps d3's
+// pan/zoom (via fitView) and layers a rotation on gRot around the focused
+// cluster, with two parallax starfield layers wheeling behind it — the sense
+// of the cosmos swinging as you turn to face a topic. One-shot, not free-spin.
+const ICON_STAR = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.9 7.1L21 11l-7.1 1.9L12 20l-1.9-7.1L3 11l7.1-1.9z"/></svg>';
+document.getElementById('constBtn').innerHTML = ICON_STAR;
+
+// 4-point sparkle path centred on the node origin, sized to match the circle.
+// N-point star path, centred on the node origin, first point at the top.
+function starPath(r, points = 4, innerRatio = 0.38) {
+  const ri = r * innerRatio, n = points * 2;
+  let d = '';
+  for (let i = 0; i < n; i++) {
+    const R = i % 2 ? ri : r;
+    const a = (Math.PI / points) * i - Math.PI / 2;
+    d += (i ? 'L' : 'M') + (R * Math.cos(a)).toFixed(2) + ',' + (R * Math.sin(a)).toFixed(2);
+  }
+  return d + 'Z';
+}
+// One flattened logarithmic spiral arm for the level-4 galaxy (py squashed so
+// the two arms read as a tilted disk rather than a flat pinwheel).
+function spiralArm(R, off) {
+  let d = '';
+  for (let i = 0; i <= 16; i++) {
+    const t = i / 16, rad = R * (0.15 + 0.85 * t), a = off + t * 3.2;
+    d += (i ? 'L' : 'M') + (rad * Math.cos(a)).toFixed(2) + ',' + (rad * Math.sin(a) * 0.6).toFixed(2);
+  }
+  return d;
+}
+// The map's five evidenced rungs made into escalating celestial bodies. The
+// light-emitting parts carry class 'star' so the glow, twinkle, and hot/focus
+// highlight styles apply uniformly; galaxies and black holes stay steady (no
+// twinkle). Levels 4-5 are rare by design — trophies you earn by reaching
+// fluency/mastery, so most of the sky is sparkles.
+function celestialBody(sel, d) {
+  const r = radius(d), missing = d.type === 'missing';
+  const col = missing ? 'var(--edge)' : color(d);
+  const lvl = missing ? 1 : Math.min(5, Math.max(1, Math.floor(d.evidenced) || 1));
+  const twinkle = r >= 14 && lvl <= 3;
+  const glow = el => el.attr('class', 'star' + (twinkle ? ' star-twinkle' : ''))
+    .style('color', col)
+    .style('--tw', (2.2 + Math.random() * 3.2).toFixed(2) + 's')
+    .style('animation-delay', (Math.random() * -5).toFixed(2) + 's');
+
+  if (missing) {
+    sel.append('path').attr('class', 'star').attr('d', starPath(r, 4, 0.38))
+      .attr('fill', 'none').attr('stroke', 'var(--edge)').attr('stroke-width', 1.2).style('color', col);
+  } else if (lvl <= 2) {
+    // aware / comprehend: a 4-point sparkle, fuller at level 2
+    glow(sel.append('path').attr('d', starPath(r, 4, lvl === 2 ? 0.46 : 0.36)).attr('fill', col));
+  } else if (lvl === 3) {
+    // apply: a sharper 6-point starburst
+    glow(sel.append('path').attr('d', starPath(r, 6, 0.42)).attr('fill', col));
+  } else if (lvl === 4) {
+    // fluent: a spiral galaxy — faint disk, two arms, bright glowing core
+    sel.append('ellipse').attr('class', 'star').attr('rx', r * 1.7).attr('ry', r * 0.62)
+      .attr('transform', 'rotate(-22)').attr('fill', col).attr('fill-opacity', 0.14).style('color', col);
+    [0, Math.PI].forEach(off => sel.append('path').attr('class', 'star')
+      .attr('d', spiralArm(r * 1.9, off)).attr('transform', 'rotate(-22)')
+      .attr('fill', 'none').attr('stroke', col).attr('stroke-width', 1.5)
+      .attr('stroke-linecap', 'round').attr('stroke-opacity', 0.9).style('color', col));
+    // bright inner core: a glowing coloured bulge topped by a white-hot nucleus
+    glow(sel.append('circle').attr('r', r * 0.52).attr('fill', col))
+      .style('filter', 'drop-shadow(0 0 6px currentColor)');
+    sel.append('circle').attr('class', 'star').attr('r', r * 0.26)
+      .attr('fill', '#fff').attr('fill-opacity', 0.95).style('color', col);
+  } else {
+    // mastery: a black hole — a pitch-black disc that occludes the network behind
+    // it, ringed only by a thin event-horizon rim and a soft outer glow. Nothing
+    // bright in the centre; it swallows light rather than emitting it.
+    sel.append('circle').attr('class', 'star').attr('r', r).attr('fill', '#000')
+      .attr('stroke', col).attr('stroke-width', 1.3).attr('stroke-opacity', 0.9)
+      .style('color', col).style('filter', 'drop-shadow(0 0 5px currentColor)');
+  }
+}
+
+// Two parallax layers, drawn once, oversized so rotation never exposes an edge.
+// Distant stars are steady (no twinkle) — subtle points, as asked.
+let sfBuilt = false;
+function buildStarfield() {
+  if (sfBuilt) return;
+  sfBuilt = true;
+  const host = document.getElementById('starfield');
+  // Inner layer that carries the slow ambient rotation (CSS animation); the
+  // canvases live inside it so dive rotation/tilt and drift compose cleanly.
+  const spin = document.createElement('div');
+  spin.id = 'sfSpin';
+  host.appendChild(spin);
+  const D = Math.ceil(Math.hypot(W, H) * 1.35);
+  const layer = (count, rmax, amax, tint) => {
+    const c = document.createElement('canvas');
+    c.width = D; c.height = D; c.style.width = D + 'px'; c.style.height = D + 'px';
+    const x = c.getContext('2d');
+    for (let i = 0; i < count; i++) {
+      const a = (Math.random() * amax + 0.12).toFixed(2);
+      x.beginPath();
+      x.arc(Math.random() * D, Math.random() * D, Math.random() * rmax + 0.3, 0, 7);
+      x.fillStyle = (tint && Math.random() < 0.12)
+        ? (Math.random() < 0.5 ? `rgba(150,180,255,${a})` : `rgba(255,222,188,${a})`)
+        : `rgba(255,255,255,${a})`;
+      x.fill();
+    }
+    spin.appendChild(c);
+  };
+  layer(460, 1.0, 0.45, false);  // far, faint — child[0]
+  layer(150, 1.7, 0.7, true);    // near, a few tinted — child[1]
+}
+
+// Camera rotation. gRot spins around the cluster centre (world coords); the two
+// starfield layers turn at fractions of that for depth; labels counter-rotate
+// so they stay upright.
+let camRot = 0, camTilt = 0, spinRAF = null, spinCx = W / 2, spinCy = H / 2;
+function setCam(rot, tilt, cx, cy) {
+  camRot = rot; camTilt = tilt; spinCx = cx; spinCy = cy;
+  // In-plane spin (Z) stays an SVG transform, so d3's pan/zoom are undisturbed;
+  // labels counter-rotate to stay upright.
+  gRot.attr('transform', rot ? `rotate(${rot} ${cx} ${cy})` : null);
+  gRot.selectAll('.node text').attr('transform', rot ? `rotate(${-rot})` : null);
+  // Horizontal-axis pitch (X) is a CSS 3D tilt of the whole SVG — the plane
+  // turns in space as you dive. Cleared at rest so the flat map stays crisp and
+  // d3's 2D pointer math is exact whenever you're actually panning/zooming.
+  const gel = document.getElementById('graph');
+  if (tilt) { gel.style.transformOrigin = 'center center';
+    gel.style.transform = `perspective(900px) rotateX(${tilt.toFixed(2)}deg)`; }
+  else gel.style.transform = '';
+  const layers = document.querySelectorAll('#starfield canvas');
+  if (layers[0]) { layers[0].style.setProperty('--sf-rot', (rot * 0.3).toFixed(2) + 'deg');
+    layers[0].style.setProperty('--sf-tilt', (tilt * 0.5).toFixed(2) + 'deg'); }
+  if (layers[1]) { layers[1].style.setProperty('--sf-rot', (rot * 0.62).toFixed(2) + 'deg');
+    layers[1].style.setProperty('--sf-tilt', (tilt * 0.8).toFixed(2) + 'deg'); }
+}
+function spin(targetRot, targetTilt, cx, cy, dur) {
+  if (!document.body.classList.contains('constellation')) return;
+  cx = cx == null ? spinCx : cx; cy = cy == null ? spinCy : cy;
+  const r0 = camRot, p0 = camTilt, t0 = performance.now();
+  if (spinRAF) cancelAnimationFrame(spinRAF);
+  const ease = u => u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+  const step = now => {
+    const u = Math.min(1, (now - t0) / dur), e = ease(u);
+    setCam(r0 + (targetRot - r0) * e, p0 + (targetTilt - p0) * e, cx, cy);
+    if (u < 1) spinRAF = requestAnimationFrame(step);
+  };
+  spinRAF = requestAnimationFrame(step);
+}
+// Dive into a topic: bank toward its cluster (sign/size from the pan direction)
+// and wheel the field around the cluster centre. fitView (called by drill) does
+// the zoom in parallel, so the two read as one cinematic move.
+function diveTo(id) {
+  const ids = neighborSet(id);
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  nodes.forEach(n => { if (ids.has(n.id)) {
+    x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y);
+    x1 = Math.max(x1, n.x); y1 = Math.max(y1, n.y); } });
+  if (!isFinite(x0)) return;
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const sx = d3.zoomTransform(svg.node()).applyX(cx);
+  // Bank toward the cluster: direction from which way we pan, magnitude a
+  // deliberate base sweep that grows with the pan distance. Every dive reads.
+  const dir = (sx - W / 2) >= 0 ? -1 : 1;
+  const delta = dir * Math.min(28, 12 + Math.abs(sx - W / 2) * 0.03);
+  // pitch the plane back as we fly in — the megastructure turns to a 3/4 view
+  spin(delta, 34, cx, cy, 800);
+}
+
+function applyConstellation(on) {
+  document.body.classList.toggle('constellation', on);
+  document.getElementById('constBtn').classList.toggle('active', on);
+  if (on) buildStarfield(); else setCam(0, 0, W / 2, H / 2);  // unwind on exit
+  localStorage.setItem('sb-constellation', on ? '1' : '0');
+}
+document.getElementById('constBtn').addEventListener('click',
+  () => applyConstellation(!document.body.classList.contains('constellation')));
+applyConstellation(localStorage.getItem('sb-constellation') === '1');
+
 // deep links: ?view=<name> opens that view (the old dashboard.html redirects
 // here with ?view=readiness); ?focus=<topic-id> opens that topic's drill-down
 // in the Map view exactly as if its node had been clicked.

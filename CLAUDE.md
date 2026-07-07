@@ -14,7 +14,8 @@ personalization runbook.
   `brain gaps` or /review; "save this" / "I just learned…" → /log; "am I
   ready for X" → `brain readiness`; "remember it as X" / "make me a
   mnemonic" / "forget that mnemonic" → /mnemonic; "what don't I know about X" /
-  "expand the frontier on X" / "grow the map around X" → /frontier. Never make
+  "expand the frontier on X" / "grow the map around X" → /frontier; "tag my
+  X stuff" / "group these under X" / "add X to the Y tag" → /tag. Never make
   the user learn a skill or command name to reach a feature.
 
 ## Command discipline
@@ -42,6 +43,9 @@ personalization runbook.
   `created`, `source`, or any body content outside `## Related`.
 - Where note vocabulary doesn't match a roadmap alias, add the alias to the
   roadmap file (`goals/roadmaps/*.yaml`) — do not rename the note's topics.
+- When a batch introduces new topics, check them against the lenses in
+  `tags.yaml`: if one plausibly belongs to an existing tag, flag it in the
+  batch summary as a /tag candidate — propose, don't add (tags stay curated).
 - After each batch of changes: `brain validate`, then `pytest -m "not e2e"`,
   then commit. Every few batches: `brain ingest` and `brain graph`.
 

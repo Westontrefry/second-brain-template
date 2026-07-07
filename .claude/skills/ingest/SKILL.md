@@ -54,7 +54,9 @@ For each (batch in groups of ~10, largest/most goal-relevant first):
    `.venv/bin/python -m brain ingest` (separate tool calls — a failure must be
    visible and isolated). Validation failure means revert that file and report it.
 4. Summarize: how many enriched, the confidence calls (which stayed at 1 vs promoted
-   to 2 and why), notable clusters found, anything the user should review.
+   to 2 and why), notable clusters found, anything the user should review. If a new
+   topic plausibly belongs to a lens in `tags.yaml`, flag it as a /tag candidate —
+   propose only, never add to a tag mid-ingest (tags stay curated).
 
 **Finish every run (ux.md #2/#3/#6 — one command per tool call):**
 1. `.venv/bin/python -m brain ingest`, then `.venv/bin/python -m brain graph`.
