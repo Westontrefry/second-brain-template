@@ -92,16 +92,38 @@ def cmd_add(args: argparse.Namespace) -> int:
 
 
 def cmd_import(args: argparse.Namespace) -> int:
-    from .importer import import_dir
+    from .importer import import_dir, import_pdf
 
     src = Path(args.src)
-    if not src.is_dir():
-        print(f"not a directory: {src}")
+    if src.is_file() and src.suffix.lower() == ".pdf":
+        from .pdfextract import ScannedPdfError, missing_deps
+
+        if missing_deps():
+            print("PDF import needs an optional dependency. install it with:")
+            print('  pip install -e ".[pdf]"')
+            return 1
+        if args.domain is None:
+            print("a PDF has no folder to map to a domain — pass --domain")
+            return 1
+        try:
+            result = import_pdf(
+                src, domain=args.domain, dry_run=args.dry_run,
+                confidence=args.confidence, importance=args.importance,
+            )
+        except ScannedPdfError as e:
+            print(f"{src}: {e}")
+            print("scanned or handwritten PDFs are out of scope for v1 — for "
+                  "handwritten notes, drop a photo into a /log or /ingest session "
+                  "and Claude will transcribe it via vision ($0).")
+            return 1
+    elif src.is_dir():
+        result = import_dir(
+            src, domain=args.domain, dry_run=args.dry_run,
+            confidence=args.confidence, importance=args.importance,
+        )
+    else:
+        print(f"not a directory or .pdf file: {src}")
         return 1
-    result = import_dir(
-        src, domain=args.domain, dry_run=args.dry_run,
-        confidence=args.confidence, importance=args.importance,
-    )
     for path, reason in result.skipped:
         print(f"skipped {path}: {reason}")
     verb = "would import" if args.dry_run else "imported"
@@ -112,6 +134,29 @@ def cmd_import(args: argparse.Namespace) -> int:
               "run the /ingest skill to add goal links and let the AI judge each "
               "note's level; import a folder of known material with --confidence 2 "
               "for exact control")
+    return 0
+
+
+def cmd_inbox(args: argparse.Namespace) -> int:
+    from .config import root
+    from .inbox import inbox_dir, sweep, waiting_files
+
+    had_waiting = bool(waiting_files())
+    result = sweep(dry_run=args.dry_run, force=args.force)
+    rel = inbox_dir().relative_to(root())
+
+    for path, reason in result.skipped:
+        print(f"skipped {path}: {reason}")
+    verb = "would import" if args.dry_run else "imported"
+    print(f"{verb} {len(result.created)} note(s)"
+          + (f"; moved {len(result.moved)} original(s) to {rel}/processed/"
+             if result.moved else ""))
+    if not had_waiting:
+        print(f"nothing waiting — drop .pdf/.md files (or export folders) "
+              f"into {rel}/<domain>/ and rerun")
+    if result.created and not args.dry_run:
+        print("imported at confidence 1 (awareness) — run the /ingest skill "
+              "to add topics, goal links, and the AI's level judgment")
     return 0
 
 
@@ -316,6 +361,49 @@ def cmd_model_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_frontier_add(args: argparse.Namespace) -> int:
+    import json
+
+    from .frontier import Proposed, add_topics
+
+    try:
+        raw = json.loads(Path(args.spec).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        print(f"could not read spec: {e}")
+        return 1
+    if not isinstance(raw, list):
+        print("spec must be a JSON list of topic objects")
+        return 1
+    try:
+        proposed = [Proposed(id=t["id"], name=t["name"],
+                             required_level=int(t.get("required_level", 2)),
+                             prereqs=list(t.get("prereqs", [])),
+                             aliases=list(t.get("aliases", []))) for t in raw]
+    except (KeyError, TypeError) as e:
+        print(f"malformed topic in spec: {e}")
+        return 1
+
+    try:
+        result = add_topics(args.goal, proposed, max_add=args.max)
+    except ValueError as e:
+        print(e)
+        return 1
+
+    for p in result.added:
+        print(f"  added: {p.id} ({p.name}) — required_level {p.required_level}")
+    for pid, alias, concept in result.dropped_aliases:
+        print(f"  dropped alias '{alias}' from {pid} (belongs to concept '{concept}')")
+    for pid, reason in result.skipped:
+        print(f"  skipped: {pid} — {reason}")
+    if result.added:
+        print(f"appended {len(result.added)} topic(s) to {result.roadmap_path}; "
+              f"registry re-synced, graph rebuilt. "
+              f"{result.dashed_total} dashed frontier nodes now on the map.")
+    else:
+        print("nothing added.")
+    return 0
+
+
 def cmd_readiness(args: argparse.Namespace) -> int:
     from .model.readiness import readiness
 
@@ -438,49 +526,6 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_frontier_add(args: argparse.Namespace) -> int:
-    import json
-
-    from .frontier import Proposed, add_topics
-
-    try:
-        raw = json.loads(Path(args.spec).read_text(encoding="utf-8"))
-    except (OSError, ValueError) as e:
-        print(f"could not read spec: {e}")
-        return 1
-    if not isinstance(raw, list):
-        print("spec must be a JSON list of topic objects")
-        return 1
-    try:
-        proposed = [Proposed(id=t["id"], name=t["name"],
-                             required_level=int(t.get("required_level", 2)),
-                             prereqs=list(t.get("prereqs", [])),
-                             aliases=list(t.get("aliases", []))) for t in raw]
-    except (KeyError, TypeError) as e:
-        print(f"malformed topic in spec: {e}")
-        return 1
-
-    try:
-        result = add_topics(args.goal, proposed, max_add=args.max)
-    except ValueError as e:
-        print(e)
-        return 1
-
-    for p in result.added:
-        print(f"  added: {p.id} ({p.name}) — required_level {p.required_level}")
-    for pid, alias, concept in result.dropped_aliases:
-        print(f"  dropped alias '{alias}' from {pid} (belongs to concept '{concept}')")
-    for pid, reason in result.skipped:
-        print(f"  skipped: {pid} — {reason}")
-    if result.added:
-        print(f"appended {len(result.added)} topic(s) to {result.roadmap_path}; "
-              f"registry re-synced, graph rebuilt. "
-              f"{result.dashed_total} dashed frontier nodes now on the map.")
-    else:
-        print("nothing added.")
-    return 0
-
-
 def build_parser() -> argparse.ArgumentParser:
     cfg = load_config()
     parser = argparse.ArgumentParser(prog="brain", description="Second Brain CLI")
@@ -502,16 +547,28 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--body", help="note body (default: read from stdin)")
     p.set_defaults(func=cmd_add)
 
-    p = sub.add_parser("import", help="import external markdown (Joplin/Obsidian exports)")
-    p.add_argument("src", help="directory of exported .md files")
+    p = sub.add_parser("import",
+                       help="import external markdown (Joplin/Obsidian exports) "
+                            "or a text-layer PDF (book/manual -> per-chapter notes)")
+    p.add_argument("src", help="directory of exported .md files, or a .pdf file")
     p.add_argument("--domain", choices=cfg["domains"],
-                   help="domain for all imported notes (default: map folder names)")
+                   help="domain for all imported notes (default: map folder "
+                        "names; required for a PDF)")
     p.add_argument("--dry-run", action="store_true", help="show what would be imported")
     p.add_argument("--confidence", type=int, default=1,
                    help="1 = you have/recognize the material (default); "
                         "2 = material you already know")
     p.add_argument("--importance", type=int, default=2)
     p.set_defaults(func=cmd_import)
+
+    p = sub.add_parser("inbox",
+                       help="sweep the Ingest/ drop folder: import waiting "
+                            "files, move originals to Ingest/processed/")
+    p.add_argument("--dry-run", action="store_true",
+                   help="show what would be imported; move nothing")
+    p.add_argument("--force", action="store_true",
+                   help="re-import a book even if notes with its tag exist")
+    p.set_defaults(func=cmd_inbox)
 
     p = sub.add_parser("ingest", help="sync notes into the index (incremental)")
     p.add_argument("--full", action="store_true", help="wipe and re-embed everything")

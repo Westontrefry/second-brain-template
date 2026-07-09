@@ -15,8 +15,11 @@ def edge_between(g, a, b):
 def test_requirement_annotated_on_exact_match(sandbox):
     g = build(today=TODAY)
     byid = {n["id"]: n for n in g["nodes"]}
+    # requirements order isn't fixed when a node is required by more than one
+    # goal — find the dsa-interviews one by goal.
     reqs = byid["databases"]["requirements"]
-    assert reqs and reqs[0]["goal"] == "dsa-interviews" and reqs[0]["gap"] == 0
+    dsa_req = next((r for r in reqs if r["goal"] == "dsa-interviews"), None)
+    assert dsa_req is not None and dsa_req["gap"] == 0
 
 
 def test_unevidenced_roadmap_topic_is_missing_node(sandbox):
