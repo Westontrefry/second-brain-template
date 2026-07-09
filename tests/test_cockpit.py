@@ -135,6 +135,9 @@ def test_action_without_claude_streams_an_error(client, monkeypatch):
 def test_action_prompt_shapes():
     assert "studied trees" in cockpit._action_prompt("log", "studied trees")
     assert cockpit._action_prompt("quiz", "").startswith("Quiz me")
+    # the node "Expand" button invokes the /frontier skill on the topic
+    expand = cockpit._action_prompt("expand", "graphs")
+    assert "/frontier" in expand and "graphs" in expand
     with pytest.raises(ValueError):
         cockpit._action_prompt("delete-everything", "")
 

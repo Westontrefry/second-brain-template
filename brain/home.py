@@ -35,6 +35,16 @@ def _index_line(files: list) -> str:
     return "index: up to date"
 
 
+def _inbox_line() -> str:
+    from .inbox import waiting_files
+
+    waiting = waiting_files()
+    if not waiting:
+        return ""
+    return (f"inbox: {len(waiting)} file(s) waiting in Ingest/ "
+            "(run: brain inbox)")
+
+
 def _gap_lines(n: int = 3) -> list[str]:
     from .gaps import analyze
 
@@ -148,6 +158,9 @@ def render_home() -> str:
             "",
             "All commands: brain --help",
         ]
+        inbox = _inbox_line()
+        if inbox:
+            out.insert(2, f"  {inbox}")
         return "\n".join(out) + "\n"
 
     from .weights import collect
@@ -157,6 +170,9 @@ def render_home() -> str:
     out.append(f"  {len(files)} notes in {len(domains)} domain(s), "
                f"{len(topics)} topics tracked")
     out.append(f"  {_index_line(files)}")
+    inbox = _inbox_line()
+    if inbox:
+        out.append(f"  {inbox}")
 
     since = since_last_time()
     if since:

@@ -15,5 +15,5 @@ heading are intentionally ignored:
 - **Splay trees**
 
 ## Week 3 — Disjoint sets
-1. [Union-find](https://example.com/union-find)
+1. [Union by rank](https://example.com/union-by-rank)
 2. Path compression

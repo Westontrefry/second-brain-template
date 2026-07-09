@@ -100,12 +100,6 @@ your knowledge + roadmaps into `ui/paths/<slug>.json` — ordered nodes with str
 statuses plus a suggestions array — which the UI renders as a highlighted route with
 the suggestions tab alongside.
 
-## /frontier — expand the map beyond the known radius (built)
-Proposes relevant topics OUTSIDE your current coverage (the unknown unknowns) and,
-once you confirm, appends them to a roadmap as dashed nodes via `brain frontier add`.
-Two modes: deepen (sub-topics of a node) and broaden (adjacent siblings the map
-hasn't touched). Also the engine behind the cockpit's per-node Expand button.
-
 ## /context — learning-state export (built)
 Wraps `brain context`: a one-screen YAML summary of tracks, readiness, and top
 gaps, ready to paste into any AI assistant. Scope with a track or goal
@@ -114,9 +108,23 @@ gaps, ready to paste into any AI assistant. Scope with a track or goal
 ## /tag — curated topic lenses (built)
 Creates and maintains the tags in `tags.yaml` — the groupings the map's search
 and Tag filter use to connect topics that share a theme but not vocabulary
-("tag my AWS stuff", "add kubernetes to the cloud tag"). The AI proposes members
-from the real on-map topic ids (judgment for entity/brand relations,
-`brain search` for recall), nothing is written without your confirm, and
-`brain graph` rebuilds the UI data. Also does check-ups: unmatched topic ids
-and new topics that plausibly belong to an existing tag.
+("tag my AWS stuff", "add gke to the Google tag"). The AI proposes members from
+the real on-map topic ids (judgment for entity/brand relations, `brain search`
+for recall), nothing is written without your confirm, and `brain graph` rebuilds
+the UI data. Also does check-ups: unmatched topic ids and new topics that
+plausibly belong to an existing tag.
 
+## Maintenance skills (for future sessions, not daily use)
+
+These three are reference skills a maintainer session (human or AI) loads when
+working ON the system rather than WITH it:
+
+- **failure-archaeology** — settled battles: bugs already fixed, approaches
+  already rejected, locked design decisions, each with symptom → root cause →
+  evidence commit → status. Read before refactoring or reopening a decision.
+- **debugging-playbook** — symptom → triage table for real failure modes (stale
+  index, UI not updating, sandbox issues, launcher, confidence confusion), plus
+  the editing-discipline reminders.
+- **confidence-judgment** — the reference behind the enrichment 1-vs-2 call:
+  the three-number model (confidence / ai_confidence / graph level), the tested
+  work-product heuristic, worked examples, and known biases.

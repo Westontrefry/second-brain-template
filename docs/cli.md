@@ -18,16 +18,47 @@ brain add --domain cs --title "MLFQ review" --topics "os,scheduling" \
 - Title becomes the id slug (`2026-07-02-mlfq-review`). Rejects invalid notes.
 
 ## import
-Bring external markdown exports into the knowledge base.
+Bring external markdown exports — or a text-layer PDF — into the knowledge base.
 ```
-brain import ~/joplin-export --dry-run          # preview
-brain import ~/joplin-export --domain cs        # all notes into one domain
-brain import ~/export                           # map folder names to domains
+brain import ~/joplin-export --dry-run           # preview a folder of markdown
+brain import ~/joplin-export --domain cs         # all notes into one domain
+brain import ~/export                            # map folder names to domains
+brain import ~/books/system-design.pdf --domain cs --dry-run   # preview a PDF
+brain import ~/books/system-design.pdf --domain cs             # book -> per-chapter notes
 ```
 - Joplin "MD - Markdown + Front Matter" exports: title/created/updated/tags preserved,
   notebook folder becomes a topic.
+- **PDF** (text-layer books/manuals): splits by the embedded outline (one note per
+  chapter; no outline -> a single note), tags every note with the book slug so they
+  group on the map. Running headers/footers and page numbers are stripped
+  deterministically (no AI). `--domain` is required (a PDF has no folder to map).
+  Needs the optional `pypdf` dep: `pip install -e ".[pdf]"`.
+- Scanned or handwritten PDFs have no text layer — they are detected and refused, not
+  imported as empty notes. For handwritten notes, drop a photo into a /log or /ingest
+  session and Claude transcribes it via vision ($0).
 - Idempotent: identical content is skipped on re-runs (content-hash dedup).
-- Imported notes get `source: import`, `goals: []` — enrich via the /ingest skill.
+- Imported notes get `source: import`, `goals: []`, confidence 1 — enrich via the
+  /ingest skill.
+
+## inbox
+Sweep the `Ingest/` drop folder into the knowledge base. `brain inbox [--dry-run] [--force]`
+- Drop `.pdf` / `.md` files (or whole export folders) into `Ingest/<domain>/` —
+  the subfolder names the domain, same rule as the markdown importer; files at
+  the root are reported, never guessed into a domain. First run creates the
+  domain subfolders so the drop target is visible in Finder.
+- Routes each entry through `brain import` (PDFs need the `.[pdf]` extra), then
+  moves originals to `Ingest/processed/<domain>/`. The whole tree is gitignored:
+  copyrighted sources never reach git, only derived notes do.
+- Dedup is layered: processed files leave the scan set; a PDF whose basename
+  already sits in `Ingest/processed/` (or whose book-slug tag already has notes)
+  is refused unless `--force`; and identical content is content-hash-skipped.
+  The content hash ignores any trailing `## Related` block, so re-sweeping an
+  enriched book still dedups. The filename guard survives a later retag — the
+  book-slug tag guard alone does not.
+- No daemon — the folder is checked, not watched: the home screen prints an
+  "N file(s) waiting" nudge and the cockpit dock has an Inbox button.
+- Imports land unenriched (`source: import`, confidence 1) — the sweep ends by
+  pointing at the /ingest skill for topics, goals, and level judgment.
 
 ## ingest / rebuild
 Sync `knowledge/` into the index. `ingest` is incremental (content hash); `rebuild`
@@ -43,7 +74,8 @@ Ranked goal-relevant knowledge gaps. `brain gaps [--goal g] [-n 10]`
   deprioritized and annotated `(first: <prereq>)`.
 
 ## brain (no command)
-The home screen: note/topic counts, index freshness, a "Since last time"
+The home screen: note/topic counts, index freshness, an inbox nudge when
+files are waiting in `Ingest/`, a "Since last time"
 recap (notes added, levels proven, topics gone stale — from events.jsonl +
 git history, previous activity day included), the top three gaps, and three
 things to try (conversational forms first). Empty brain prints the
@@ -70,7 +102,7 @@ Opt-in off-machine copy. `brain backup --setup | brain backup`
 Seven health checks — python/venv, dependencies, embedding-model cache, note
 validity, index freshness, map-data freshness, git presence — each failure
 paired with the one command that fixes it. Exit 1 if anything needs fixing.
-Automates the routine triage so users never have to.
+Automates the debugging-playbook basics; users should never need that skill.
 
 ## graph
 Export the knowledge graph: `ui/graph.json` (tooling) + `ui/graph.data.js` (bundled
@@ -100,8 +132,8 @@ drives your skills. `brain cockpit [--host 127.0.0.1] [--port 8765]`
   stays hidden, so the file-first behaviour is untouched.
 - Dock buttons: Log / Quiz / Review run the matching skill in a headless
   `claude -p` session (subscription-covered, still $0 — no API keys) and stream
-  the reply back live; a reply box continues multi-turn quiz/review. Ingest /
-  Graph / Gaps / Status / Doctor run in-process with no AI.
+  the reply back live; a reply box continues multi-turn quiz/review. Inbox /
+  Ingest / Graph / Gaps / Status / Doctor run in-process with no AI.
 - Topic selection is guided, not free-typed: the dock's Quiz/Review composer
   autocompletes from your real topic names (blank still = let it choose), and
   clicking a node on the map adds Quiz / Review / Log / Expand buttons to its
@@ -116,8 +148,7 @@ drives your skills. `brain cockpit [--host 127.0.0.1] [--port 8765]`
   enforce their evidence discipline in their own text.
 
 ## model import
-Teach the knowledge model a learning resource (the Knowledge Model Engine —
-see [architecture.md](architecture.md)).
+Teach the knowledge model a learning resource (KME — see PLAN-KME.md).
 ```
 brain model import ~/Downloads/course-syllabus.md --dry-run   # preview
 brain model import syllabus.md --track os-course               # slug override
@@ -140,13 +171,16 @@ base, and the most-converged concepts (touched by multiple tracks).
 ## frontier add
 Append confirmed frontier topics (the "unknown unknowns" the /frontier skill
 proposes) to a goal's roadmap, then re-sync the registry and rebuild the graph
-so they render as dashed nodes. `brain frontier add --goal <goal> --spec <topics.json>`
+so they render as dashed nodes.
+`brain frontier add --goal <goal> --spec <topics.json> [--max 8]`
 - `--spec` is a JSON list of `{id, name, required_level, prereqs, aliases}`.
 - Guards: skips ids already in the roadmap (dedup), skips an id that resolves to
-  an existing concept (collision), drops an alias that belongs to another concept
-  (so the new node can't silently un-dash onto existing evidence), and caps
-  additions per call with `--max` (default 8). The /frontier skill does the
-  reasoning; this command does the guarded write.
+  a different existing concept (collision), drops any alias that belongs to
+  another concept (would silently un-dash a blind spot), and caps additions per
+  call at `--max` (governor). Reports added / skipped / dropped for each.
+- Extends an existing roadmap only; it won't create one from nothing (that's
+  `/path`). Normally driven by the /frontier skill or the cockpit Expand button,
+  not by hand.
 
 ## readiness
 Explainable per-concept readiness for any track or goal. `brain readiness gcp-cdl`

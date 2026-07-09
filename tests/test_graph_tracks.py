@@ -37,14 +37,14 @@ def test_track_concepts_annotate_or_create_nodes(sandbox):
     assert "adv-ds" in ht["goals"]
     assert any(r["goal"] == "adv-ds" and r["topicId"] == "hash-maps"
                for r in ht["requirements"])
-    uf = nodes["union-find"]                      # unevidenced concept -> missing node
+    uf = nodes["union-by-rank"]                   # unevidenced concept -> missing node
     assert uf["type"] == "missing" and "adv-ds" in uf["goals"]
 
 
 def test_track_prereq_edges_and_suggestions(sandbox):
     import_resource(FIXTURE, slug="adv-ds")
     g = build(today=TODAY)
-    key = tuple(sorted(("amortized-analysis", "union-find")))
+    key = tuple(sorted(("amortized-analysis", "union-by-rank")))
     e = next((e for e in g["edges"] if (e["source"], e["target"]) == key), None)
     assert e is not None and e["kind"] == "prereq"
     sugg = g["suggestions"]["adv-ds"]
@@ -79,9 +79,13 @@ def test_imported_roadmap_format_track_renders(sandbox):
 
 def test_convergence_on_nodes(sandbox):
     write_note(sandbox, "2026-07-01-tr", topics=["trees"], confidence=3)
-    import_resource(FIXTURE, slug="adv-ds")       # trees now in dsa roadmap + adv-ds
+    # relative, not absolute: the sandbox copies the LIVE model/, so any real
+    # track touching "trees" would break a hardcoded count — assert only that
+    # importing one more track that touches it raises convergence by one
+    before = by_id(build(today=TODAY)).get("trees", {}).get("convergence", 0)
+    import_resource(FIXTURE, slug="adv-ds")       # adv-ds also touches trees
     g = build(today=TODAY)
     nodes = by_id(g)
-    assert nodes["trees"]["convergence"] == 2
-    assert nodes["union-find"]["convergence"] == 1
+    assert nodes["trees"]["convergence"] == before + 1
+    assert nodes["union-by-rank"]["convergence"] == 1  # fixture-only concept
     assert "convergence" not in nodes.get("authentication", {})  # off-model topic

@@ -13,7 +13,7 @@ def by_id(g):
 
 def test_practice_links_attach_to_resolved_node(sandbox):
     pdir = sandbox / "model" / "practice"
-    pdir.mkdir(parents=True, exist_ok=True)  # the sandbox model/ may ship one
+    pdir.mkdir(parents=True, exist_ok=True)  # sandbox copies live model/
     (pdir / "test-list.yaml").write_text(
         "trees:\n  - name: Invert Binary Tree\n    url: https://example.com/invert\n",
         encoding="utf-8",
@@ -34,18 +34,6 @@ def test_alias_refs_resolve_to_the_same_concept(sandbox):
     g = build(today=TODAY)
     practice = by_id(g)["heaps"].get("practice", [])
     assert {"name": "Last Stone Weight", "url": "https://example.com/lsw"} in practice
-
-
-def test_unknown_practice_concept_skipped_not_fatal(sandbox, capsys):
-    pdir = sandbox / "model" / "practice"
-    pdir.mkdir(parents=True, exist_ok=True)
-    (pdir / "test-list.yaml").write_text(
-        "no-such-concept:\n  - name: X\n    url: https://example.com/x\n",
-        encoding="utf-8",
-    )
-    g = build(today=TODAY)  # must not raise
-    assert "no-such-concept" in capsys.readouterr().out
-    assert all("X" != p["name"] for n in g["nodes"] for p in n.get("practice", []))
 
 
 def test_roadmap_only_concept_accepts_practice(sandbox):
@@ -72,3 +60,15 @@ def test_roadmap_only_concept_accepts_practice(sandbox):
     g = build(today=TODAY)
     practice = by_id(g)["fresh-topic"].get("practice", [])
     assert {"name": "P1", "url": "https://example.com/p1"} in practice
+
+
+def test_unknown_practice_concept_skipped_not_fatal(sandbox, capsys):
+    pdir = sandbox / "model" / "practice"
+    pdir.mkdir(parents=True, exist_ok=True)
+    (pdir / "test-list.yaml").write_text(
+        "no-such-concept:\n  - name: X\n    url: https://example.com/x\n",
+        encoding="utf-8",
+    )
+    g = build(today=TODAY)  # must not raise
+    assert "no-such-concept" in capsys.readouterr().out
+    assert all("X" != p["name"] for n in g["nodes"] for p in n.get("practice", []))
