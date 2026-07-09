@@ -17,7 +17,7 @@ def test_parse_outline_fixture():
         "Week 1 — Review", "Week 2 — Amortized analysis", "Week 3 — Disjoint sets"]
     assert units[0].terms == ["Hash tables", "Trees"]
     assert units[1].terms == ["Amortized analysis", "Splay trees"]  # ':' desc cut, bold stripped
-    assert units[2].terms == ["Union-find", "Path compression"]     # numbered + link
+    assert units[2].terms == ["Union by rank", "Path compression"]  # numbered + link
 
 
 def test_clean_term():
@@ -42,7 +42,7 @@ def test_import_outline(sandbox):
 
     # known vocabulary canonicalizes, unknown terms became concepts
     assert {c.id for c in result.new_concepts} == {
-        "amortized-analysis", "union-find", "path-compression"}
+        "amortized-analysis", "union-by-rank", "path-compression"}
     reg = registry.load()
     assert reg.resolve("amortized analysis") == "amortized-analysis"
 
@@ -55,8 +55,8 @@ def test_import_outline(sandbox):
     # order-based edges: adjacent units only, inferred confidence, no self-loops
     pairs = {(e.source, e.target) for e in track.edges}
     assert ("hash-maps", "amortized-analysis") in pairs
-    assert ("amortized-analysis", "union-find") in pairs
-    assert ("hash-maps", "union-find") not in pairs  # units 1->3 not adjacent
+    assert ("amortized-analysis", "union-by-rank") in pairs
+    assert ("hash-maps", "union-by-rank") not in pairs  # units 1->3 not adjacent
     assert ("trees", "trees") not in pairs           # Trees then Splay trees
     assert all(e.confidence == OUTLINE_EDGE_CONFIDENCE and "outline order" in e.provenance
                for e in track.edges)

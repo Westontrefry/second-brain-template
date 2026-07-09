@@ -7,6 +7,8 @@ ui/graph.json
 ui/graph.data.js
 ui/notes.data.js
 .DS_Store
+.Rhistory
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
 joplin-export/
+/Ingest/

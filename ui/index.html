@@ -103,8 +103,13 @@
   * { box-sizing:border-box; }
   select, input { background:var(--panel); color:inherit; }
   button { color:var(--ink); }
+  /* Flex column so #stage gets exactly the space under the REAL header height.
+     The old `height:calc(100vh - 45px)` assumed a one-row header, but the
+     header wraps its controls on most widths — the stage overflowed the
+     viewport bottom by the extra rows and the map centered visibly too low. */
   body { margin:0; font:14px/1.5 -apple-system, "Segoe UI", sans-serif;
-         color:var(--ink); background:var(--bg); overflow:hidden; }
+         color:var(--ink); background:var(--bg); overflow:hidden;
+         display:flex; flex-direction:column; height:100vh; }
   header { display:flex; gap:14px; align-items:center; padding:10px 16px;
            border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
   header h1 { font-size:15px; font-weight:600; margin:0 8px 0 0; }
@@ -118,7 +123,7 @@
   #legend [data-level]:hover { border-color:var(--line); }
   #legend [data-level].active { border-color:var(--ink); color:var(--ink); background:var(--panel); }
   .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:4px; vertical-align:-1px; }
-  #stage { position:relative; width:100vw; height:calc(100vh - 45px); }
+  #stage { position:relative; width:100vw; flex:1 1 auto; min-height:0; }
   svg { width:100%; height:100%; display:block; cursor:grab; }
   .edge { stroke:var(--edge); stroke-opacity:.45; }
   .edge.wikilink { stroke-dasharray:2 3; }
@@ -431,6 +436,7 @@
     <button class="ai" data-action="quiz">Quiz</button>
     <button class="ai" data-action="review">Review</button>
     <div class="grp">refresh (no AI)</div>
+    <button data-mech="inbox" title="import files waiting in Ingest/">Inbox</button>
     <button data-mech="ingest">Ingest</button>
     <button data-mech="graph">Graph</button>
     <button data-mech="gaps">Gaps</button>
@@ -616,7 +622,7 @@ main();
 function main() {
 const G = window.GRAPH, PATHS = window.PATHS || [];
 const svg = d3.select('#graph'), stage = document.getElementById('stage');
-const W = stage.clientWidth, H = stage.clientHeight;
+let W = stage.clientWidth, H = stage.clientHeight;  // live — refitMap() re-measures on resize
 const g = svg.append('g');
 // Constellation rotation layer: nested inside the d3-zoom group so pan/zoom
 // stay with d3 (translate+scale only) while a dive can wheel the whole field
@@ -625,17 +631,50 @@ const g = svg.append('g');
 // descendants, so only the append/route sites target gRot.
 const gRot = g.append('g').attr('id', 'rot');
 const routeEl = gRot.append('path').attr('id', 'route');
-// Render-cost guard: shed the expensive per-star filters/animations (see the
-// .fxsuspend CSS) while the view is in motion, restore a beat after it stops.
-// fxSuspend is idempotent; fxRelease debounces so back-to-back gestures don't flicker.
-let fxTimer = null;
-function fxSuspend() { if (fxTimer) { clearTimeout(fxTimer); fxTimer = null; } document.body.classList.add('fxsuspend'); }
-function fxRelease(delay = 180) { if (fxTimer) clearTimeout(fxTimer); fxTimer = setTimeout(() => { document.body.classList.remove('fxsuspend'); fxTimer = null; }, delay); }
+// Render-cost guard: shed the expensive per-star filters/edges/spin (see the
+// .fxsuspend CSS) while the view is in motion, restore once it goes idle.
+//
+// A single rAF idle-watcher owns the release. Every motion event (each zoom
+// frame, drag, sim tick, slider re-heat) calls fxSuspend, which stamps
+// fxLastMotion and — if not already suspended — adds the body class and starts
+// the watcher. The watcher clears the class only after FX_QUIET ms of true
+// stillness, then stops itself (no perpetual idle repaint).
+//
+// Why this shape: the old release was a per-gesture setTimeout. d3 emits a
+// start/end pair per wheel/pinch segment, so a flurry of small pan/zoom
+// gestures toggled the body class on and off many times a second — and because
+// .fxsuspend gates glow + twinkle + #sfSpin + all edges at the document.body
+// level, every toggle repainted the whole page (starfield AND menu). That
+// oscillation was the strobe. Coalescing every motion into one suspend, released
+// once on real idle, removes the toggling entirely. (Never rebuild this on
+// setTimeout: under the render load it guards, the timer starves and the guard
+// inverts — the lesson from the earlier attempt.)
+const FX_QUIET = 220;
+let fxLastMotion = 0, fxRAF = null;
+function fxSuspend() {
+  fxLastMotion = performance.now();
+  document.body.classList.add('fxsuspend');   // idempotent; no recalc if unchanged
+  if (fxRAF === null) fxRAF = requestAnimationFrame(fxWatch);
+}
+function fxWatch(now) {
+  if (now - fxLastMotion >= FX_QUIET) {
+    // Cull BEFORE lifting the suspend: only in-scope/in-view edges come back,
+    // so the restore repaint is small instead of all 1602 edges at once.
+    updateEdgeVisibility();
+    document.body.classList.remove('fxsuspend');
+    fxRAF = null;                              // stop the loop — no idle repaint
+    return;
+  }
+  fxRAF = requestAnimationFrame(fxWatch);
+}
+// Motion end no longer schedules its own release — the watcher decides when the
+// view is truly idle. Kept as a no-op so call sites still read "motion ended".
+function fxRelease() {}
 
 const zoom = d3.zoom().scaleExtent([0.04, 4])
   .on('start', fxSuspend)
-  .on('zoom', e => g.attr('transform', e.transform))
-  .on('end', () => fxRelease());
+  .on('zoom', e => { g.attr('transform', e.transform); fxSuspend(); })
+  .on('end', fxRelease);
 svg.call(zoom);
 
 // Fit the camera to a set of node ids (or all nodes). Pass avail < W when the
@@ -651,10 +690,32 @@ function fitView(ids, {duration = 600, padding = 70, avail = W} = {}) {
   });
   const k = Math.max(0.04, Math.min(2,
     (avail - 2 * padding) / (x1 - x0), (H - 2 * padding) / (y1 - y0)));
+  // Vertical anchor sits a touch above the geometric middle (47%): the eye
+  // reads "centered" against the header above and the suggestion chrome below,
+  // so true 50% always looked like the map sagged low.
   const t = d3.zoomIdentity
-    .translate(avail / 2 - k * (x0 + x1) / 2, H / 2 - k * (y0 + y1) / 2)
+    .translate(avail / 2 - k * (x0 + x1) / 2, H * 0.47 - k * (y0 + y1) / 2)
     .scale(k);
   (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
+}
+
+// Window resized: re-measure the stage, refresh the live W/H that fitView /
+// edge-culling / cluster math read, rebuild the starfield if it no longer
+// covers the diagonal, and re-center on whatever is in focus (the ego network
+// mid-drill, else the whole graph). If the map tab is hidden the stage
+// measures 0x0 — defer to the next setView('map').
+let mapNeedsRefit = false;
+function refitMap() {
+  if (!stage.clientWidth || !stage.clientHeight) { mapNeedsRefit = true; return; }
+  mapNeedsRefit = false;
+  W = stage.clientWidth; H = stage.clientHeight;
+  const host = document.getElementById('starfield');
+  if (sfBuilt && host) { host.innerHTML = ''; sfBuilt = false; buildStarfield(); }
+  // duration 0: applies synchronously (no rAF), so it works even when the tab
+  // is backgrounded mid-resize — and a snap reads better than a tween while
+  // the user is still dragging the window edge.
+  fitView(focusId ? neighborSet(focusId) : null,
+          {duration: 0, avail: focusId ? W - 344 : W});
 }
 
 // goals and tracks are different things (goals.yaml objectives vs imported
@@ -798,7 +859,7 @@ function render() {
   const node = gRot.selectAll('.node').data(nodes).join('g').attr('class', 'node')
     .call(d3.drag()
       .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.2).restart(); fxSuspend(); d.fx = d.x; d.fy = d.y; })
-      .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+      .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; fxSuspend(); })
       .on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); fxRelease(); d.fx = d.fy = null; }))
     .on('click', (e, d) => { e.stopPropagation(); drill(d.id, true); });
 
@@ -822,6 +883,10 @@ function render() {
         .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
     node.attr('transform', d => `translate(${d.x},${d.y})`);
     drawRoute();
+    // Keep effects shed while the layout is visibly moving (initial settle, drag
+    // re-heat, slider reflow). Alpha guard skips the 60s idle refresh tick, which
+    // runs at rest (alpha ~ 0) and must not suspend effects.
+    if (sim && sim.alpha() > 0.05) fxSuspend();
   };
   sim = d3.forceSimulation(nodes)
     // a touch more friction than the 0.4 default so the dense centre glides to a
@@ -851,6 +916,7 @@ function render() {
   sim.stop();
   for (let i = 0; i < 600 && sim.alpha() > sim.alphaMin(); i++) sim.tick();
   tick();
+  updateEdgeVisibility();   // first paint already viewport-culled
   // Region watermarks: one faint domain label at each cluster's settled centroid,
   // inserted behind the nodes. Only when clustering and only for regions with nodes.
   if (clusterMode) {
@@ -892,14 +958,45 @@ function applyModes() {
                          (searchSet !== null && !searchSet.has(d.id)))
     .classed('diverge', d => div && diverges(d))
     .classed('focusring', d => d.id === focusId);
+  updateEdgeVisibility();
+}
+
+// Edge visibility — the strobe fix. The constellation strobed because the
+// aggregate GPU raster load (597 glowing stars + 1602 edges + starfield +
+// blur layers) crossed the compositor's texture budget, and it thrashed —
+// per-layer asynchronous flashing, worse in bigger windows (probes D-G,
+// PR #40). Edges were the dominant contributor, and a DIMMED edge costs the
+// GPU exactly what a full edge costs — opacity isn't free. So out-of-scope
+// edges are now REMOVED, not ghosted:
+//   - a network in focus (drill / search / gap / level filter) renders ONLY
+//     its own edges — nothing outside the scope exists;
+//   - free browsing viewport-culls: an edge renders only if an endpoint is
+//     on (or near) screen. Refreshed at gesture-idle via the fx watcher, so
+//     it costs nothing mid-gesture (edges are hidden during motion anyway).
+// The 40% overscan margin absorbs pan slack and the dive rotation's frame
+// error (node x/y are pre-rotation coordinates; at extreme dive angles an
+// edge may pop at the rim — accepted v1 tradeoff).
+function updateEdgeVisibility() {
+  const gap = document.getElementById('gapToggle').checked;
+  const nbrs = focusId ? neighborSet(focusId) : null;
+  let vp = null;
+  if (!nbrs) {
+    const t = d3.zoomTransform(svg.node());
+    const mx = W * 0.4, my = H * 0.4;
+    vp = { x0: (-mx - t.x) / t.k, x1: (W + mx - t.x) / t.k,
+           y0: (-my - t.y) / t.k, y1: (H + my - t.y) / t.k };
+  }
+  const inVp = p => p.x >= vp.x0 && p.x <= vp.x1 && p.y >= vp.y0 && p.y <= vp.y1;
   g.selectAll('.edge')
     .classed('hot', d => gap && d.kind === 'prereq' && (hasGap(d.source) || hasGap(d.target)))
-    .classed('dim', d => {
-      if (nbrs && !(d.source.id === focusId || d.target.id === focusId)) return true;
-      if (gap && !(hasGap(d.source) || hasGap(d.target))) return true;
-      if (levelFilter !== null && !(matchesLevel(d.source) && matchesLevel(d.target))) return true;
-      if (searchSet !== null && !(searchSet.has(d.source.id) && searchSet.has(d.target.id))) return true;
-      return false;
+    .classed('dim', false)
+    .style('display', d => {
+      if (nbrs && !(d.source.id === focusId || d.target.id === focusId)) return 'none';
+      if (gap && !(hasGap(d.source) || hasGap(d.target))) return 'none';
+      if (levelFilter !== null && !(matchesLevel(d.source) && matchesLevel(d.target))) return 'none';
+      if (searchSet !== null && !(searchSet.has(d.source.id) && searchSet.has(d.target.id))) return 'none';
+      if (vp && !inVp(d.source) && !inVp(d.target)) return 'none';
+      return null;
     });
 }
 function diverges(n) {
@@ -1173,6 +1270,9 @@ function setView(v) {
   document.body.dataset.view = v;
   document.querySelectorAll('#viewTabs button').forEach(b =>
     b.classList.toggle('active', b.dataset.view === v));
+  // a resize that happened while the map tab was hidden couldn't measure the
+  // stage — settle the deferred refit now that it's visible again
+  if (v === 'map' && mapNeedsRefit) requestAnimationFrame(refitMap);
   if (v !== 'map' && chartDirty[v]) { drawView(v); chartDirty[v] = false; }
   if (cmActive) cmClose(false);  // hide, don't burn: it returns on the next visit
   requestAnimationFrame(() => maybeCoach(v));  // after the chart has painted
@@ -1596,7 +1696,7 @@ window.addEventListener('keydown', e => {
 let resizeTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(markChartsDirty, 150);
+  resizeTimer = setTimeout(() => { markChartsDirty(); refitMap(); }, 150);
 });
 
 svg.on('click', clearFocus);

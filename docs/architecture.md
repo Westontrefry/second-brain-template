@@ -26,7 +26,7 @@ knowledge/*.md  goals/*.yaml  rubrics/depth.yaml        (source of truth, git-ve
       ├── retrieve.py   semantic search + metadata filters
       ├── weights.py    topic weight + evidenced level (no DB needed)
       ├── gaps.py       roadmap diff -> ranked gaps
-      ├── model/        Knowledge Model Engine (KME):
+      ├── model/        Knowledge Model Engine (KME, see PLAN-KME.md):
       │     registry.py   model/concepts.yaml load/validate/resolve/merge
       │     tracks.py     track schema + IN-MEMORY roadmap adapter (roadmaps
       │                   stay the single source; no materialized copy)

@@ -90,6 +90,7 @@ def run_mechanical(op: str) -> dict:
     from . import cli
 
     ops = {
+        "inbox": (cli.cmd_inbox, Namespace(dry_run=False, force=False)),
         "ingest": (cli.cmd_ingest, Namespace(full=False)),
         "graph": (cli.cmd_graph, Namespace()),
         "status": (cli.cmd_status, Namespace()),
@@ -100,7 +101,7 @@ def run_mechanical(op: str) -> dict:
     return _run_cli(func, ns)
 
 
-MECHANICAL_OPS = ("ingest", "graph", "status", "doctor", "gaps")
+MECHANICAL_OPS = ("inbox", "ingest", "graph", "status", "doctor", "gaps")
 
 
 # ---- SSE helpers ----

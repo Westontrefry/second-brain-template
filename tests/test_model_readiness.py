@@ -37,7 +37,7 @@ def test_ready_track_exits_clean(sandbox):
     write_note(sandbox, "2026-06-30-ht", topics=["hash tables"], confidence=3)
     write_note(sandbox, "2026-06-29-tr", topics=["trees"], confidence=3)
     write_note(sandbox, "2026-06-28-aa", topics=["amortized analysis"], confidence=2)
-    write_note(sandbox, "2026-06-27-uf", topics=["union-find"], confidence=2)
+    write_note(sandbox, "2026-06-27-uf", topics=["union by rank"], confidence=2)
     write_note(sandbox, "2026-06-26-pc", topics=["path compression"], confidence=2)
     import_resource(FIXTURE, slug="adv-ds")
     report = readiness("adv-ds", today=TODAY)

@@ -51,15 +51,18 @@ def test_recent_event_unstales_a_concept(sandbox):
 
 
 def test_convergence_counts_tracks(sandbox):
+    # relative, not absolute: the sandbox copies the LIVE model/, so real
+    # tracks touching "trees" vary — assert the counting behavior instead
     m = compile_model(TODAY)
-    assert m.concepts["trees"].convergence == 1        # dsa roadmap only
+    before = m.concepts["trees"].convergence
+    assert before >= 1 and "dsa-interviews" in m.concepts["trees"].tracks
     import_resource(FIXTURE, slug="adv-ds")            # fixture also covers trees
     m = compile_model(TODAY)
-    assert m.concepts["trees"].convergence == 2
-    assert set(m.concepts["trees"].tracks) == {"dsa-interviews", "adv-ds"}
+    assert m.concepts["trees"].convergence == before + 1
+    assert "adv-ds" in m.concepts["trees"].tracks
     assert m.concepts["big-o"].convergence == 1
-    assert m.concepts["union-find"].convergence == 1   # imported concept classified too
-    assert m.concepts["union-find"].state == "missing"
+    assert m.concepts["union-by-rank"].convergence == 1   # imported concept classified too
+    assert m.concepts["union-by-rank"].state == "missing"
 
 
 def test_edges_carry_track_and_provenance(sandbox):

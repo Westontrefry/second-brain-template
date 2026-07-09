@@ -147,6 +147,30 @@ Export your notes from the other app as markdown, then:
 Heads-up: the tagging step reads every note with AI, so a big pile of notes
 takes a while (and Claude usage). Fine to let it run overnight.
 
+**Got a book or a manual as a PDF?** Point it at the file and it pulls the text
+out, splits it into one note per chapter, and drops the whole book onto your map:
+```
+brain import ~/books/system-design.pdf --domain cs
+```
+
+**Even easier: the drop folder.** There's an `Ingest/` folder in your brain with
+a subfolder for each of your subjects. Drag any PDF or markdown file into the
+right subfolder (a book about caching goes in `Ingest/cs/`), and next time
+you're around, run:
+```
+brain inbox
+```
+It imports everything waiting, tucks the originals into `Ingest/processed/` so
+nothing gets imported twice, and reminds you to run the tagging step. The home
+screen and the cockpit both show a "files waiting" nudge, and the cockpit has an
+**Inbox** button — so a dropped file never gets forgotten. (Originals never
+leave your machine or land in git — only the notes made from them do.)
+One catch: this reads the *typed* text inside the PDF. A scanned copy or your own
+**handwritten** notes have no text to pull — it'll tell you so instead of making
+blank notes. For handwriting, just snap a photo and paste it into a chat: "log
+these notes" — Claude reads the image and writes the note for you, no scanner
+needed.
+
 Everything you import starts at **"aware"** — you *have* the material, but having
 a file doesn't mean you've learned it. As the AI reads each note to tag it, it
 also decides whether the note actually shows you *engaged* with the material

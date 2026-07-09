@@ -23,6 +23,12 @@ cockpit = [
     "fastapi>=0.110",
     "uvicorn>=0.29",
 ]
+# PDF ingestion is opt-in: without it, `brain import <file>.pdf` prints an
+# install hint instead of a traceback. pypdf is pure-Python (no system libs).
+# Text-layer only; scanned/handwritten PDFs are detected and refused.
+pdf = [
+    "pypdf>=4.0",
+]
 
 [project.scripts]
 brain = "brain.cli:main"

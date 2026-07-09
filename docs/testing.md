@@ -41,10 +41,9 @@ SKILL.md.
 ## Sandboxing
 
 Every test runs against a sandbox in a tmp dir, selected via the `BRAIN_ROOT`
-env var (`tests/conftest.py::sandbox`): the live config.yaml plus frozen fixtures
-for goals, rubrics, the concept registry, and the knowledge set
-(`tests/fixtures/{goals,rubrics,model,knowledge}` — so personalizing your goals,
-roadmaps, or registry never breaks the suite).
+env var (`tests/conftest.py::sandbox`): live config/goals/rubrics/model plus a frozen
+knowledge set (`tests/fixtures/knowledge/` — the four original seed notes; the
+live `knowledge/` tree grows with use and would make assertions data-dependent).
 Tests never touch the real knowledge base or index. `write_note()` in conftest
 builds synthetic notes.
 
