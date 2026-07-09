@@ -350,7 +350,7 @@ week 5 before you get there.
 
 **How:** save the syllabus as a markdown file (headings for the weeks, bullet
 points for the topics), then say "teach it this syllabus:
-~/Downloads/cop4610-syllabus.md" (or run `brain model import <file>`, with
+~/Downloads/course-syllabus.md" (or run `brain model import <file>`, with
 `--dry-run` to preview without saving). Topics it already knows get matched
 up (it knows "splay trees" belong to your Trees knowledge); genuinely new
 ones get added to its vocabulary automatically.
