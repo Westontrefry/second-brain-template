@@ -36,6 +36,7 @@ def test_each_leak_class_is_caught():
         "absolute macOS home path": "/Us" + "ers/someone/Desktop/x",
         "personal-only content marker": "pack: " + "personal",
         "markdown link to an upstream-only doc": "see [the plan](" + "../PLAN" + "-UX.md)",
+        "reference to an upstream pull request": "fixed upstream (PR " + "#40)",
     }
     for why, sample in samples.items():
         assert why in hits(sample), f"gate no longer catches: {why}"
@@ -50,6 +51,8 @@ def test_benign_lookalikes_pass():
         "documented per-milestone in PROGRESS.md",    # prose mention, not a link
         "user@example.com",
         "goals: [cs-degree, dsa-interviews]",
+        "open a PR against main",          # PR without a number is fine
+        "issue #12 tracks this",           # numbered non-PR references are fine
     ]
     for sample in benign:
         assert not hits(sample), f"false positive on: {sample!r} -> {hits(sample)}"

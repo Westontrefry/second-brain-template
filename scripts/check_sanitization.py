@@ -48,6 +48,10 @@ FORBIDDEN = [
                 r"graph-scaling\.md|overnight-runbook\.md|ci-and-branch-protection\.md|"
                 r"template-sync\.md)"),
      "markdown link to an upstream-only doc"),
+    # PR numbers always mean the UPSTREAM repo's PRs (this template's own history
+    # is merged by hash) — in public content they dangle, then eventually point at
+    # the wrong PR here. Name the change ("the strobe diagnosis"), not the PR.
+    (re.compile(r"\bPRs?\s?#\d+", re.I), "reference to an upstream pull request"),
 ]
 
 # Upstream-only artifacts that must not exist in the public template.

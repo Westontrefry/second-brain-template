@@ -22,7 +22,7 @@
   body.constellation, body.constellation #stage { background:#05060a; }
   /* No backdrop-filter in constellation: each blur re-filters everything behind
      it every frame on its own composited layer — part of the standing GPU load
-     behind the flicker (PR #40). Slightly more opaque solids read the same. */
+     behind the flicker (strobe diagnosis). Slightly more opaque solids read the same. */
   body.constellation header { background:rgba(8,9,15,.92); border-bottom-color:#161821; }
   body.constellation #panel, body.constellation .chartcard,
   body.constellation #noteBox, body.constellation #cmCard { background:rgba(11,13,21,.96); }
@@ -73,7 +73,7 @@
   /* Star glow is PAINTED, not filtered: a radial-gradient underlay disc per node
      (.glow, filled from the glow-* defs). The old drop-shadow filters re-rastered
      ~600 stars on every transform change — a standing slice of the GPU texture
-     budget the strobe diagnosis blamed (PR #40). A gradient disc paints with the
+     budget the strobe diagnosis blamed. A gradient disc paints with the
      node and composites for free. stroke:none !important shields the disc from
      the generic .hot/.diverge/.focusring circle ring rules. */
   body.constellation .glow { display:block; pointer-events:none; stroke:none !important; }
@@ -984,8 +984,8 @@ function applyModes() {
 // Edge visibility — the strobe fix. The constellation strobed because the
 // aggregate GPU raster load (597 glowing stars + 1602 edges + starfield +
 // blur layers) crossed the compositor's texture budget, and it thrashed —
-// per-layer asynchronous flashing, worse in bigger windows (probes D-G,
-// PR #40). Edges were the dominant contributor, and a DIMMED edge costs the
+// per-layer asynchronous flashing, worse in bigger windows (probes D-G of
+// the strobe diagnosis). Edges were the dominant contributor, and a DIMMED edge costs the
 // GPU exactly what a full edge costs — opacity isn't free. So out-of-scope
 // edges are now REMOVED, not ghosted:
 //   - a network in focus (drill / search / gap / level filter) renders ONLY
@@ -1997,7 +1997,7 @@ function buildStarfield() {
   // these are will-change-promoted layers, so each holds a GPU texture at full
   // pixel size for the life of the skin — the old diagonal×1.8 square was
   // 3000px+ on a laptop, tens of MB of standing texture per layer (the
-  // starfield's share of the PR #40 budget diagnosis). A starfield upsampled
+  // starfield's share of the strobe budget diagnosis). A starfield upsampled
   // ~1.2–1.5× is visually indistinguishable; the texture cost falls by the square.
   const D = Math.ceil(Math.hypot(W, H) * 1.45);   // coverage the mask geometry needs
   const RES = Math.min(D, 2048);                  // texture cap (drawn pixels)
@@ -2295,7 +2295,7 @@ requestAnimationFrame(() => maybeCoach(document.body.dataset.view));
 })();
 </script>
 <script>
-// ---- Probe kit (PR #40): red badge + rAF fps/zoom meter, on ?probe=1 -------
+// ---- Probe kit (strobe diagnosis): red badge + rAF fps/zoom meter, on ?probe=1 ----
 // The strobe was GPU texture thrash — it only shows on a real screen (a hidden
 // or headless page suspends rAF and never exhibits GPU flicker), so acceptance
 // is eyes-on-localhost plus this instrument. The red badge is the manipulation
