@@ -20,21 +20,28 @@
   body.constellation { --ink:#e8e9f0; --muted:#8b8ea3; --line:#20222e; --bg:#05060a;
               --panel:#0b0d15; --code-bg:#10121c; --edge:#333850; --link:#8fb8ff; }
   body.constellation, body.constellation #stage { background:#05060a; }
-  body.constellation header { background:rgba(8,9,15,.72); backdrop-filter:blur(6px); border-bottom-color:#161821; }
+  /* No backdrop-filter in constellation: each blur re-filters everything behind
+     it every frame on its own composited layer — part of the standing GPU load
+     behind the flicker (PR #40). Slightly more opaque solids read the same. */
+  body.constellation header { background:rgba(8,9,15,.92); border-bottom-color:#161821; }
   body.constellation #panel, body.constellation .chartcard,
-  body.constellation #noteBox, body.constellation #cmCard { background:rgba(11,13,21,.9); backdrop-filter:blur(8px); }
+  body.constellation #noteBox, body.constellation #cmCard { background:rgba(11,13,21,.96); }
   #starfield { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0; display:none; }
   body.constellation #starfield { display:block; }
   #starfield canvas { position:absolute; top:50%; left:50%; transform-origin:center center;
-                      transform:translate(-50%,-50%) perspective(1600px) rotateX(var(--sf-tilt,0deg)) rotate(var(--sf-rot,0deg));
+                      /* --sf-scale upsamples a capped-resolution canvas to full coverage —
+                         see buildStarfield(); uniform scale, so tilt/rotate compose unchanged. */
+                      transform:translate(-50%,-50%) perspective(1600px) rotateX(var(--sf-tilt,0deg)) rotate(var(--sf-rot,0deg)) scale(var(--sf-scale,1));
                       will-change:transform;
                       /* Fade the plane's stars to nothing well inside its own rectangle, in the
                          plane's (pre-transform) space, so once it tilts/rotates/pans there is no
                          rectangular edge to reach — the field just dissolves into deep space. This
                          is what actually kills the visible "plane border", which the per-star alpha
-                         fade could not (faint stars still reached the canvas edge). */
-                      -webkit-mask-image:radial-gradient(closest-side,#000 58%,rgba(0,0,0,0) 88%);
-                      mask-image:radial-gradient(closest-side,#000 58%,rgba(0,0,0,0) 88%); }
+                         fade could not (faint stars still reached the canvas edge). Stops sized to
+                         the 1.45× overscan: flat-view corners sit at ≤69% of the radius, inside
+                         the solid zone; the fade band is dive-only scenery. */
+                      -webkit-mask-image:radial-gradient(closest-side,#000 72%,rgba(0,0,0,0) 100%);
+                      mask-image:radial-gradient(closest-side,#000 72%,rgba(0,0,0,0) 100%); }
   /* Ambient drift: the starfield slowly rotates around the view centre (≈ the
      focused cluster), a gentle star-trail time-lapse so the sky feels alive.
      The clip stays on #starfield (axis-aligned); only this inner layer spins,
@@ -53,37 +60,37 @@
   body.constellation #panel { z-index:10; }
   /* star nodes: a 4-point sparkle with a soft self-coloured glow. Off by
      default; the plain circles carry non-constellation modes untouched. */
-  .star { display:none; }
+  .star, .glow { display:none; }
   /* The 4-point star is a spiky shape with empty notches between the arms, and
      nodes render tiny at the overview — so clicks land on an oversized transparent
      disc instead. It's sized to the collision radius, the largest target that
      still never overlaps a neighbour's disc. Inert outside constellation; the
      plain map keeps its own visible circle as the hit target. */
   .node circle.hit { fill:transparent; stroke:none; pointer-events:none; }
-  body.constellation .node circle:not(.hit):not(.star) { display:none; }
+  body.constellation .node circle:not(.hit):not(.star):not(.glow) { display:none; }
   body.constellation .node circle.hit { pointer-events:all; }
-  body.constellation .star { display:block; filter:drop-shadow(0 0 3px currentColor); pointer-events:none; }
+  body.constellation .star { display:block; pointer-events:none; }
+  /* Star glow is PAINTED, not filtered: a radial-gradient underlay disc per node
+     (.glow, filled from the glow-* defs). The old drop-shadow filters re-rastered
+     ~600 stars on every transform change — a standing slice of the GPU texture
+     budget the strobe diagnosis blamed (PR #40). A gradient disc paints with the
+     node and composites for free. stroke:none !important shields the disc from
+     the generic .hot/.diverge/.focusring circle ring rules. */
+  body.constellation .glow { display:block; pointer-events:none; stroke:none !important; }
   body.constellation .node text { fill:#aeb2c9; }
   body.constellation .edge { stroke:#2b2f43; stroke-opacity:.5; }
   /* the circle carries hot/focus/diverge in the normal map; mirror those onto
      the star so search, pathways and divergence still read in space */
-  body.constellation .hot .star { filter:drop-shadow(0 0 6px var(--hot)); }
+  body.constellation .hot .glow { fill:url(#glow-hot); }
   body.constellation .diverge .star { stroke:#7F77DD; stroke-width:2px; }
   body.constellation .focusring .star { stroke:#378ADD; stroke-width:2px; }
   .star-twinkle { animation:twinkle var(--tw,3s) ease-in-out infinite alternate; }
   @keyframes twinkle { from { opacity:.5; } to { opacity:1; } }
-  /* Perf: a twinkling star animates its opacity every frame forever. Combined with
-     the drop-shadow glow that means re-running a blur on each one continuously —
-     a repaint antipattern that makes the idle map feel heavy. Drop the filter on
-     twinklers so their animation is compositor-cheap; steady stars keep the glow. */
-  body.constellation .star-twinkle { filter:none; }
-  /* Render-cost guard. The per-star drop-shadow glow and twinkle are cheap at
-     rest but re-rasterise every star on every pan/zoom/drag frame (SVG filters
-     aren't GPU-composited), which is what makes a big constellation feel rough.
-     While a gesture or the sim is live we shed both, then restore a beat after it
-     stops — the still map looks identical. !important beats the inline glow that
-     celestialBody() paints on galaxy cores and quasars. */
-  body.constellation.fxsuspend .star { filter:none !important; }
+  /* Render-cost guard. With the glow painted (zero SVG filters in the file)
+     there is no blur left to shed; mid-gesture we still pause twinkle and drop
+     the glow discs so each motion frame paints fewer, smaller elements. They
+     snap back a beat after motion stops, like the edges below. */
+  body.constellation.fxsuspend .glow { display:none; }
   body.constellation.fxsuspend .star-twinkle { animation-play-state:paused; }
   /* Simplify during motion: hide the ~1,500 edges while panning/zooming/dragging
      so the browser rasterises far fewer elements each frame (both skins); they snap
@@ -623,6 +630,19 @@ function main() {
 const G = window.GRAPH, PATHS = window.PATHS || [];
 const svg = d3.select('#graph'), stage = document.getElementById('stage');
 let W = stage.clientWidth, H = stage.clientHeight;  // live — refitMap() re-measures on resize
+// Painted star glows: one radialGradient per palette colour, referenced by the
+// .glow underlay disc celestialBody() puts behind each body. stop-color rides
+// the CSS variables, so the discs recolour with the theme automatically. The
+// hot variant is brighter, standing in for the old 6px hot halo.
+const defs = svg.append('defs');
+['lvl1', 'lvl2', 'lvl3', 'lvl4', 'lvl5', 'edge', 'hot'].forEach(name => {
+  const gr = defs.append('radialGradient').attr('id', 'glow-' + name);
+  const stops = name === 'hot' ? [[0, 0.8], [0.45, 0.3], [1, 0]]
+                               : [[0, 0.55], [0.4, 0.2], [1, 0]];
+  stops.forEach(([off, op]) => gr.append('stop')
+    .attr('offset', off).attr('stop-opacity', op)
+    .style('stop-color', `var(--${name})`));
+});
 const g = svg.append('g');
 // Constellation rotation layer: nested inside the d3-zoom group so pan/zoom
 // stay with d3 (translate+scale only) while a dive can wheel the whole field
@@ -1899,6 +1919,18 @@ function celestialBody(sel, d) {
     .style('--tw', (2.2 + Math.random() * 3.2).toFixed(2) + 's')
     .style('animation-delay', (Math.random() * -5).toFixed(2) + 's');
 
+  // Soft halo: a gradient disc painted behind the body — the compositor-cheap
+  // stand-in for the old drop-shadow filters (see the .glow CSS). Galaxies and
+  // quasars get a wider disc, standing in for their brighter inline core glows.
+  // Missing nodes stay bare: they are hollow outlines, and a bright-centred
+  // disc would show through them as a filled blob.
+  if (!missing) {
+    const gname = col.replace('var(--', '').replace(')', '');   // lvl1..5 | edge
+    const glowR = lvl === 4 ? r * 1.35 : lvl === 5 ? r * 1.6 : r * 1.05 + 7;
+    sel.append('circle').attr('class', 'glow')
+      .attr('r', glowR.toFixed(1)).attr('fill', `url(#glow-${gname})`);
+  }
+
   if (missing) {
     sel.append('path').attr('class', 'star').attr('d', starPath(r, 4, 0.38))
       .attr('fill', 'none').attr('stroke', 'var(--edge)').attr('stroke-width', 1.2).style('color', col);
@@ -1916,9 +1948,9 @@ function celestialBody(sel, d) {
       .attr('d', spiralArm(r * 1.9, off)).attr('transform', 'rotate(-22)')
       .attr('fill', 'none').attr('stroke', col).attr('stroke-width', 1.5)
       .attr('stroke-linecap', 'round').attr('stroke-opacity', 0.9).style('color', col));
-    // bright inner core: a glowing coloured bulge topped by a white-hot nucleus
-    glow(sel.append('circle').attr('r', r * 0.52).attr('fill', col))
-      .style('filter', 'drop-shadow(0 0 6px currentColor)');
+    // bright inner core: a coloured bulge topped by a white-hot nucleus; the
+    // core's glow is the node's gradient underlay disc, not a filter
+    glow(sel.append('circle').attr('r', r * 0.52).attr('fill', col));
     sel.append('circle').attr('class', 'star').attr('r', r * 0.26)
       .attr('fill', '#fff').attr('fill-opacity', 0.95).style('color', col);
   } else {
@@ -1929,17 +1961,17 @@ function celestialBody(sel, d) {
     // tool — see docs/graph-scaling.md — so mastery and "collapsed region" never
     // read as the same thing.)
     const q = sel.append('g').attr('transform', 'rotate(-24)');
-    // twin jets: tapering beams up and down from the core, blurred to a blaze
+    // twin jets: tapering half-transparent beams up and down from the core
     [1, -1].forEach(dir => q.append('path').attr('class', 'star')
       .attr('d', `M ${-r * 0.32} 0 L 0 ${dir * r * 3} L ${r * 0.32} 0 Z`)
-      .attr('fill', col).attr('fill-opacity', 0.5).style('color', col)
-      .style('filter', 'drop-shadow(0 0 4px currentColor)'));
+      .attr('fill', col).attr('fill-opacity', 0.5).style('color', col));
     // hot accretion disk — brighter and tighter than the fluency galaxy's
     q.append('ellipse').attr('class', 'star').attr('rx', r * 1.6).attr('ry', r * 0.42)
       .attr('fill', col).attr('fill-opacity', 0.3).style('color', col);
-    // blinding core: a glowing coloured bulge under a white-hot nucleus
+    // blinding core: a coloured bulge under a white-hot nucleus (glow comes
+    // from the node's oversized gradient underlay disc)
     q.append('circle').attr('class', 'star').attr('r', r * 0.55).attr('fill', col)
-      .style('color', col).style('filter', 'drop-shadow(0 0 8px currentColor)');
+      .style('color', col);
     q.append('circle').attr('class', 'star').attr('r', r * 0.3)
       .attr('fill', '#fff').attr('fill-opacity', 0.98).style('color', col);
   }
@@ -1957,22 +1989,30 @@ function buildStarfield() {
   const spin = document.createElement('div');
   spin.id = 'sfSpin';
   host.appendChild(spin);
-  // Sized generously past the viewport, and — the important part — the stars
-  // fade radially to nothing before the canvas rim (see `fade` below). A dive
-  // pitches this plane back 34°, which used to rotate its hard rectangular edge
-  // into view as a corny visible border; with the rim already empty, the tilt
-  // now just recedes into deep space. Fully populated within the inner disc
-  // (which still covers the flat viewport), easing out beyond it.
-  const D = Math.ceil(Math.hypot(W, H) * 1.8);
+  // Sized past the viewport so rotation/tilt never expose an edge — but only
+  // just: the CSS radial mask (see #starfield canvas) already dissolves the rim,
+  // so 1.45× the diagonal keeps flat-view corners inside the solid zone with
+  // margin, at 65% of the old 1.8× texture area. On top of that the canvas is
+  // DRAWN at a capped resolution and upscaled by the transform's --sf-scale:
+  // these are will-change-promoted layers, so each holds a GPU texture at full
+  // pixel size for the life of the skin — the old diagonal×1.8 square was
+  // 3000px+ on a laptop, tens of MB of standing texture per layer (the
+  // starfield's share of the PR #40 budget diagnosis). A starfield upsampled
+  // ~1.2–1.5× is visually indistinguishable; the texture cost falls by the square.
+  const D = Math.ceil(Math.hypot(W, H) * 1.45);   // coverage the mask geometry needs
+  const RES = Math.min(D, 2048);                  // texture cap (drawn pixels)
+  const up = D / RES;
   const layer = (count, rmax, amax, tint) => {
     const c = document.createElement('canvas');
-    c.width = D; c.height = D; c.style.width = D + 'px'; c.style.height = D + 'px';
+    c.width = RES; c.height = RES; c.style.width = RES + 'px'; c.style.height = RES + 'px';
+    c.style.setProperty('--sf-scale', up.toFixed(4));
     const x = c.getContext('2d');
-    // Uniform stars — the CSS radial mask (see #starfield canvas) does the edge fade.
+    // Uniform stars — the CSS radial mask (see #starfield canvas) does the edge
+    // fade. Radii are divided by the upscale so on-screen star size is unchanged.
     for (let i = 0; i < count; i++) {
       const a = (Math.random() * amax + 0.12).toFixed(2);
       x.beginPath();
-      x.arc(Math.random() * D, Math.random() * D, Math.random() * rmax + 0.3, 0, 7);
+      x.arc(Math.random() * RES, Math.random() * RES, (Math.random() * rmax + 0.3) / up, 0, 7);
       x.fillStyle = (tint && Math.random() < 0.12)
         ? (Math.random() < 0.5 ? `rgba(150,180,255,${a})` : `rgba(255,222,188,${a})`)
         : `rgba(255,255,255,${a})`;
@@ -1980,9 +2020,9 @@ function buildStarfield() {
     }
     spin.appendChild(c);
   };
-  // counts scaled to the 1.8x area so on-screen density is unchanged
-  layer(820, 1.0, 0.45, false);  // far, faint — child[0]
-  layer(268, 1.7, 0.7, true);    // near, a few tinted — child[1]
+  // counts scaled to the 1.45x area so on-screen density matches the old field
+  layer(532, 1.0, 0.45, false);  // far, faint — child[0]
+  layer(174, 1.7, 0.7, true);    // near, a few tinted — child[1]
 }
 
 // Camera rotation. gRot spins around the cluster centre (world coords); the two
@@ -2252,6 +2292,42 @@ requestAnimationFrame(() => maybeCoach(document.body.dataset.view));
   }
   document.getElementById('cockSend').addEventListener('click', sendReply);
   replyBox.addEventListener('keydown', e => { if (e.key === 'Enter') sendReply(); });
+})();
+</script>
+<script>
+// ---- Probe kit (PR #40): red badge + rAF fps/zoom meter, on ?probe=1 -------
+// The strobe was GPU texture thrash — it only shows on a real screen (a hidden
+// or headless page suspends rAF and never exhibits GPU flicker), so acceptance
+// is eyes-on-localhost plus this instrument. The red badge is the manipulation
+// check (proof the probe build is what's running); the meter pins "feels
+// better" to numbers. fps over a half-second window (green ✓ ≥50, ~ ≥30, ✗
+// below), k = d3 zoom scale (the strobe historically bit past k≈0.5), plus
+// live star/glow/edge element counts. Inert — no DOM, no rAF — without the
+// query param, so it costs nothing in normal use.
+(function () {
+  if (!new URLSearchParams(location.search).has('probe')) return;
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:9999;background:#c0392b;'
+    + 'color:#fff;font:600 12px/1.5 ui-monospace,Menlo,monospace;padding:6px 10px;'
+    + 'border-radius:6px;pointer-events:none;white-space:pre';
+  el.textContent = 'PROBE';
+  document.body.appendChild(el);
+  let frames = 0, t0 = performance.now();
+  requestAnimationFrame(function loop(now) {
+    frames++;
+    if (now - t0 >= 500) {
+      const fps = Math.round(frames * 1000 / (now - t0));
+      frames = 0; t0 = now;
+      let k = 0;
+      try { k = d3.zoomTransform(document.getElementById('graph')).k; } catch (e) { /* non-map view */ }
+      el.textContent = 'PROBE  fps ' + fps + (fps >= 50 ? ' ✓' : fps >= 30 ? ' ~' : ' ✗')
+        + '  k ' + k.toFixed(2)
+        + '\nstars ' + document.querySelectorAll('.star').length
+        + '  glows ' + document.querySelectorAll('.glow').length
+        + '  edges ' + document.querySelectorAll('.edge').length;
+    }
+    requestAnimationFrame(loop);
+  });
 })();
 </script>
 </body>
