@@ -10,9 +10,11 @@ levels:
       - Topic appears in a roadmap but in no notes, quiz results, or project work.
 
   - level: 1
-    name: exposure
+    name: awareness
     indicators:
-      - Concept is mentioned or defined in notes, but only in borrowed/definitional terms.
+      - Material is on hand but not internalized — a resource acquired, or a document
+        known only by its title / table of contents, with no engagement yet.
+      - Concept is mentioned or defined only in borrowed/definitional terms.
       - Can recognize the term; cannot yet explain mechanism or purpose unprompted.
 
   - level: 2
